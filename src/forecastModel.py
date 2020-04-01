@@ -114,10 +114,10 @@ class forecastModel():
         #df2.head()
 
         # 2 formulate as supervised ML - necessary for multivariate forecasting
-        df2['label'] = df2['requests'].shift(-1)   # add next month's deposits as label!
+        df2['label'] = df2['requests'].shift(-1)                 # add next month's deposits as label!
         df2.dropna(inplace=True)                                 # last row has a null label! -> drop it
 
-        # 3 split to train/set
+        # 3 Train/set split
         test_size = self.getTestSize()*len(df2)
         train_size = len(df2) - test_size
         labels = df2['label']
@@ -125,14 +125,13 @@ class forecastModel():
         trainX, testX = df2.loc[0:train_size, :], df2.loc[train_size:len(df2),:]          # spit the features
         trainY, testY = labels.loc[0:train_size], labels.loc[train_size:len(labels)]      # split the labels
 
-        # 4 reshape train arrays to numpy arrays
+        # 4 Reshape to expected LSTM input shape
         trainX_array = np.array(trainX)
         trainY_array = np.array(trainY)
         trainX_array = trainX_array.reshape(trainX.shape[0], 1, trainX.shape[1])
         input_shape = trainX_array.shape
         self.__setInputShape__(input_shape)
 
-        # 4 reshape test
         testX_array = np.array(testX)
         testY_array = np.array(testY)
         testX_array = testX_array.reshape(testX.shape[0], 1, testX.shape[1])

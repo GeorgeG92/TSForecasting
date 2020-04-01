@@ -37,8 +37,8 @@ class TS_Analysis():    # add export of plots
 
     def plotTS(self):
         print("\tPlotting TS data and exporting to "+str(self.getExportPath()))
-        if not os.path.exists(self.getClusterPath()):
-            os.mkdir(self.getClusterPath())
+        if not os.path.exists(self.getExportPath()):
+            os.mkdir(self.getExportPath())
         df = self.getData()
         df.reset_index(inplace=True)
         fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(15,15))
