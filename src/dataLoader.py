@@ -78,7 +78,7 @@ class DataLoader():
         dfw = self.loadWeatherData(weatherpath)
         #Resample df to a frequency of an hour
         df["request_date"]= pd.to_datetime(df["request_date"])
-        df = df.resample('h', on = 'request_date').count()
+        df = df.resample('h', on = 'request_date').count()              # read frequency from config
         df = df.rename(columns={'passenger_id': 'requests'})
         df = df[['requests']]
 

@@ -4,19 +4,21 @@ from TS_Analysis import TS_Analysis
 from forecastModel import forecastModel
 import os
 import sys
+import yaml
 import argparse
 import warnings
 
 
-def main(args, cluster=False):
+def main(args, config, cluster=False):
     data = DataLoader(args.input, args.impute).getData()
-    # if args.cluster:
-    #     clusterAnalysis(data, args, explore=args.explore)
+    if args.cluster:
+        clusterAnalysis(data, args, explore=args.explore)
     # TS_Analysis(data)
     # model = forecastModel(data)
+    data.to_csv("data.csv")
     return 0
 
-def arg_parser(argv):
+def argParser(argv):
     """Add command line arguments and parse user inputs.
     Args:
         argv: User input from the command line.
@@ -42,11 +44,8 @@ def arg_parser(argv):
                         default='info', help='set logging level',
                         choices=['debug', 'info', 'warning', 'error',
                                  'critical'])
-    parser.add_argument('-i', '--impute',
-                        default='fast',
-                        help='Set imputation method: fast (KNN) or slow (MICE)',
-                        choices=['fast',
-                                 'slow'])
+    parser.add_argument('-i', '--impute', action='store_true', default=False,
+                        help='Select imputation fast (KNN) or slow (MICE) over dropping')
 
     parser.add_argument('-m', '--method',
                         default='LSTM',
@@ -55,19 +54,46 @@ def arg_parser(argv):
                                  'SARIMAX'])
 
     args = parser.parse_args(argv[1:])                                           # exclude filename
-
-    assert os.path.exists(args.input), "Data file is missing"
-
     if args.explore and not args.cluster:
         print("Argument error: --explore argument requires --cluster")
         sys.exit(1)
     return args
 
 
+def ConfigParser():
+    def assertBetween(name, x, lo, hi):
+        if not (lo <= x <= hi):
+            return False
+        return True
+
+    assert os.path.exists("./config.yaml"), "No configuration file found"
+    with open('config.yaml') as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+        assert os.path.exists(config['General']['input']), "Input file not found"
+        if not os.path.exists(config['General']['enrichment']):
+            config['General']['enrichment'] = None
+        assert isinstance(config['General']['cleanColumnsThresold'], float), "Threshold has to be a floating point number"
+        assert assertBetween('cleanColumnsThresold', config['General']['cleanColumnsThresold'], 0, 1), "CleanColumnsThresold has to be between 0 and 1"
+        assert config['General']['imputation'] in ['KNN', 'MICE'], "Imputation methods supported are 'KNN' and 'MICE'"
+        assert config['General']['resample'] in ['h'], "Invalid time sampling frequency"
+            # log that if not 'h', no enrichment available
+        if config['General']['resample']!='h':
+            config['General']['enrichment'] = None
+        assert isinstance(config['Forecasting']['stepsOut'], int), "StepsOut parameter has to be an integer"
+        assert isinstance(config['Forecasting']['stepsIn'], int), "StepsIn parameter has to be an integer"
+        assert all(isinstance(item, int) for item in config['Forecasting']['LSTM']['GridSearchCV']['epochs']), "Epochs parameter has to be an integer number"
+        assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 Regularization parameter has to be a float number"
+        assert all(assertBetween('L2', element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 has to be between 0 and 1"
+        assert all(isinstance(item, int) for item in config['Forecasting']['LSTM']['GridSearchCV']['batchSize']), "BatchSize parameter has to an integer number"
+        assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout parameter has to be a float number"
+        assert all(assertBetween('Dropout', element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout has to be between 0 and 1"
+        assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate parameter has to be a float number"
+        assert all(assertBetween('LearningRate', element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate has to be between 0 and 1"
+        return config
+
+
 if __name__== "__main__":
-    # os.environ['KMP_WARNINGS'] = 'off'        # openmp warnings
-    # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # tensorflow deprications
-    # warnings.filterwarnings("ignore")
-    args = arg_parser(sys.argv)
+    args = argParser(sys.argv)
+    config = ConfigParser()
     print(args)
-    main(args)
+    main(args, config)
