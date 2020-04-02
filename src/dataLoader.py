@@ -61,7 +61,7 @@ class DataLoader():
             print("\tWe have "+str(missingPerc)+"% missing values so we drop them")    #def loadWeatherData(self):
             df = df.dropna()
         else:
-            print("\tWe have more than "+str(missingPerc)+"% missing values, attempting imputation")
+            print("\tWe have more than "+str(rowNanThreshold)+"% missing values, attempting imputation")
             df = self.impute(df, imputemode)
         return df
 

@@ -10,10 +10,10 @@ import warnings
 import pandas as pd
 
 def main(args, config, cluster=False):
-    # data = DataLoader(args.input, args.impute).getData()
+    data = DataLoader(args.input, args.impute).getData()
     # if args.cluster:
     #     clusterAnalysis(data, args, explore=args.explore)
-    # TS_Analysis(data)
+    TS_Analysis(data)
 
     data = pd.read_csv("data.csv")
     if args.method=='LSTM':

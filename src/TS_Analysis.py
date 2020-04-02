@@ -77,4 +77,4 @@ class TS_Analysis():
             row = pd.Series({'H0 Rejected':1 if dfadf.loc['p-value'] <= 0.05 else 0})   # result of the test
             dfadf = dfadf.append(row)
             dftest[col,'ADF'] = dfadf
-        dftest.to_csv("../data//ADFtestResults.csv")
+        dftest.to_csv(self.exportpath+'/ADFtestResults.csv')
