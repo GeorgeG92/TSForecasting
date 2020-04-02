@@ -7,7 +7,7 @@ import numpy as np
 import warnings
 
 class DataLoader():
-    def __init__(self, datapath, imputemode, exportpath="../plots", weatherpath='../data/lima_2015_weatherdata.csv'):
+    def __init__(self, datapath, imputemode, exportpath="../output/Cleaning", weatherpath='../data/lima_2015_weatherdata.csv'):
         warnings.filterwarnings("ignore")
         df = pd.read_csv(datapath, sep='\t')
         df = self.cleanData(df, imputemode, exportpath)

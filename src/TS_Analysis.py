@@ -11,35 +11,19 @@ import seaborn as sns
 import warnings
 
 
-class TS_Analysis():    # add export of plots
-    def __init__(self, df, exportpath='../plots'):
+class TS_Analysis():
+    def __init__(self, df, exportpath='../output/TS_Decomposition'):
         print("Starting Multivariate Time Series Analysis")
         warnings.filterwarnings("ignore")
-        self.__setData__(df)
-        self.__setExportPath__(exportpath)
-        self.plotTS()
-        self.TSDecomposition()
-        self.stationarityTests()
+        self.exportpath = exportpath
+        self.plotTS(df)
+        self.TSDecomposition(df)
+        self.stationarityTests(df)
 
-    def getExportPath(self):
-        return self.__exportpath
-
-    def __setData__(self, df):
-        self.__data = df
-
-
-    def __setExportPath__(self, exportpath):
-        self.__exportpath = exportpath
-
-    def getData(self):
-        return self.__data
-
-
-    def plotTS(self):
-        print("\tPlotting TS data and exporting to "+str(self.getExportPath()))
-        if not os.path.exists(self.getExportPath()):
-            os.mkdir(self.getExportPath())
-        df = self.getData()
+    def plotTS(self, df):
+        print("\tPlotting TS data and exporting to "+str(self.exportpath))
+        if not os.path.exists(self.exportpath):
+            os.mkdir(self.exportpath)
         df.reset_index(inplace=True)
         fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(15,15))
         figure = sns.lineplot(x='request_date', y='requests', color="indianred", data=df, ax=axs[0])
@@ -54,14 +38,13 @@ class TS_Analysis():    # add export of plots
         figure = sns.lineplot(x='request_date', y='WindSpeed', color="black", data=df, ax=axs[3])
         for item in figure.get_xticklabels():
             item.set_rotation(45)
-        plt.savefig(self.getExportPath()+"/plots.png")
+        plt.savefig(self.exportpath+"/plots.png")
         plt.close(fig)
 
-    def TSDecomposition(self):                                   # examine trend, seasonality
+    def TSDecomposition(self, df):                                   # examine trend, seasonality
         rcParams['figure.figsize'] = 18, 8
-        print("\tExporting Time Series Decomposition to "+str(self.getExportPath()))
+        print("\tExporting Time Series Decomposition to "+str(self.exportpath))
         usefulcols = ['requests', 'Temperature', 'Precipitation', 'WindSpeed']
-        df = self.getData()
         for col in usefulcols:                           # do it for all relevant TS columns
             temp = df[['request_date', col]]
             temp = temp.set_index('request_date')
@@ -69,25 +52,23 @@ class TS_Analysis():    # add export of plots
 
             decomposition = sm.tsa.seasonal_decompose(temp, model='additive')
             fig = decomposition.plot()
-            fig.savefig(self.getExportPath()+'/'+str(col)+'_decomposition.png')
+            fig.savefig(self.exportpath+'/'+str(col)+'_decomposition.png')
             plt.close(fig)
 
 
-    def adf_test(self, timeseries):    # The more negative the Test Statistic is, the harder we reject H0: unit root/stationary
+    def adf_test(self, timeseries):                  # The more negative the Test Statistic is, the harder we reject H0: unit root/stationary
         #Perform Dickey-Fuller test:                 # equally: H0: TS is non-stationary
         dftest = adfuller(timeseries, autolag='AIC')
         dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','Lags Used','Number of Observations Used'])
         for key,value in dftest[4].items():
             dfoutput['Critical Value (%s)'%key] = value
-        #print (dfoutput)
         return dfoutput
 
-    def stationarityTests(self):        # check for stationarity to determine whether its necessary to transform
+    def stationarityTests(self, df):        # check for stationarity to determine whether its necessary to transform
         # In principle we do not need to check for stationarity nor correct for it when we are using an LSTM. However,
         # if the data is stationary, it will help with better performance and make it easier for the neural network
         # to learn.
-        print("\tTesting if TS is stationary and exporting results to "+str(self.getExportPath())+"/ADFtestResults.csv")
-        df = self.getData()             # (log, boxcox) for forecasting
+        print("\tTesting if TS is stationary and exporting results to "+str(self.exportpath)+"/ADFtestResults.csv")
         df.drop(columns=['request_date'], inplace=True)
         dftest = pd.DataFrame()
         #usefulcols = [col for col in df.columns if col!='request_date']    # except the time index

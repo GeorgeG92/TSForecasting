@@ -11,28 +11,15 @@ import warnings
 
 
 class clusterAnalysis():
-    def __init__(self, df, clusterpath='../plots', explore=False):
+    def __init__(self, df, exportpath='../output/Clustering', explore=False):
         warnings.filterwarnings("ignore")
-        self.__setClusterPath__(clusterpath)
-        self.__setData__(df)
+        self.exportpath = exportpath
         if explore!=False:
             self.clusterExploration(df, 'source')
             self.clusterExploration(df, 'destination')
         df = self.clusterData(df)
         self.drawClustersOnMap(df, 'source')
         self.drawClustersOnMap(df, 'destination')
-
-    def getData(self):
-        return self.__data
-
-    def __setData__(self, df):
-        self.__data = df
-
-    def getClusterPath(self):
-        return self.__clusterpath
-
-    def __setClusterPath__(self, path):
-        self.__clusterpath = path
 
     def clusterExploration(self, df_geo, kind):
         performanceList = []
@@ -62,9 +49,9 @@ class clusterAnalysis():
         plt.xlabel('k')
         plt.ylabel('Sum of squared distances')
         plt.title('Error vs K in '+str(kind)+' coordinates')
-        if not os.path.exists(self.getClusterPath()):
+        if not os.path.exists(self.exportpath):
             os.mkdir(outputfolder)
-        plt.savefig(self.getClusterPath()+'/elbow_rule_'+str(kind)+'.png')
+        plt.savefig(self.exportpath+'/elbow_rule_'+str(kind)+'.png')
         plt.close()
 
     def clusterData(self, df, k=15):                                    # default after elbow rule
@@ -119,5 +106,5 @@ class clusterAnalysis():
         ax.set_xlim(BBox[0],BBox[1])
         ax.set_ylim(BBox[2],BBox[3])
         ax.imshow(ruh_m, zorder=0, extent = BBox, aspect= 'equal')
-        fig.savefig(str(self.getClusterPath())+'/Clustermap_'+str(kind)+'.png')
+        fig.savefig(str(self.exportpath)+'/Clustermap_'+str(kind)+'.png')
         plt.close(fig)

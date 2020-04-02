@@ -10,6 +10,7 @@ General:
 Forecasting:
   'stepsOut': 12
   'stepsIn': 72
+  'testSize': 0.2
   LSTM:
     'GridSearchCV': {
         'epochs': [5, 10, 20],

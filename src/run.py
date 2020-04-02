@@ -1,21 +1,25 @@
 from dataLoader import DataLoader
 from clusterAnalysis import clusterAnalysis
 from TS_Analysis import TS_Analysis
-from forecastModel import forecastModel
+from LSTMModel import LSTMModel
 import os
 import sys
 import yaml
 import argparse
 import warnings
-
+import pandas as pd
 
 def main(args, config, cluster=False):
-    data = DataLoader(args.input, args.impute).getData()
-    if args.cluster:
-        clusterAnalysis(data, args, explore=args.explore)
+    # data = DataLoader(args.input, args.impute).getData()
+    # if args.cluster:
+    #     clusterAnalysis(data, args, explore=args.explore)
     # TS_Analysis(data)
-    # model = forecastModel(data)
-    data.to_csv("data.csv")
+
+    data = pd.read_csv("data.csv")
+    if args.method=='LSTM':
+        model = LSTMModel(data, args.train, config)
+    else:
+        model = None                                     # implement SARIMAX logic
     return 0
 
 def argParser(argv):
@@ -61,7 +65,11 @@ def argParser(argv):
 
 
 def ConfigParser():
-    def assertBetween(name, x, lo, hi):
+    """Open configuration file and parse it.
+    Returns:
+        A dictionary with validated parsed parameters.
+    """
+    def assertBetween(x, lo, hi):
         if not (lo <= x <= hi):
             return False
         return True
@@ -72,8 +80,8 @@ def ConfigParser():
         assert os.path.exists(config['General']['input']), "Input file not found"
         if not os.path.exists(config['General']['enrichment']):
             config['General']['enrichment'] = None
-        assert isinstance(config['General']['cleanColumnsThresold'], float), "Threshold has to be a floating point number"
-        assert assertBetween('cleanColumnsThresold', config['General']['cleanColumnsThresold'], 0, 1), "CleanColumnsThresold has to be between 0 and 1"
+        assert isinstance(config['General']['cleanColumnsThresold'], float), "Colmun Threshold has to be a floating point number"
+        assert assertBetween(config['General']['cleanColumnsThresold'], 0, 1), "Colmun Threshold has to be between 0 and 1"
         assert config['General']['imputation'] in ['KNN', 'MICE'], "Imputation methods supported are 'KNN' and 'MICE'"
         assert config['General']['resample'] in ['h'], "Invalid time sampling frequency"
             # log that if not 'h', no enrichment available
@@ -83,17 +91,18 @@ def ConfigParser():
         assert isinstance(config['Forecasting']['stepsIn'], int), "StepsIn parameter has to be an integer"
         assert all(isinstance(item, int) for item in config['Forecasting']['LSTM']['GridSearchCV']['epochs']), "Epochs parameter has to be an integer number"
         assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 Regularization parameter has to be a float number"
-        assert all(assertBetween('L2', element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 has to be between 0 and 1"
+        assert all(assertBetween(element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 has to be between 0 and 1"
         assert all(isinstance(item, int) for item in config['Forecasting']['LSTM']['GridSearchCV']['batchSize']), "BatchSize parameter has to an integer number"
         assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout parameter has to be a float number"
-        assert all(assertBetween('Dropout', element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout has to be between 0 and 1"
+        assert all(assertBetween(element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout has to be between 0 and 1"
         assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate parameter has to be a float number"
-        assert all(assertBetween('LearningRate', element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate has to be between 0 and 1"
+        assert all(assertBetween(element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate has to be between 0 and 1"
+        assert isinstance(config['Forecasting']['testSize'], float), "TestSize has to be a floating point number"
+        assert assertBetween(config['Forecasting']['testSize'], 0, 1), "TestSize has to be between 0 and 1"
         return config
 
 
 if __name__== "__main__":
     args = argParser(sys.argv)
     config = ConfigParser()
-    print(args)
     main(args, config)
