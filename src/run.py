@@ -10,10 +10,10 @@ import warnings
 import pandas as pd
 
 def main(args, config, cluster=False):
-    data = DataLoader(args.input, args.impute).getData()
+    #data = DataLoader(args.input, args.impute).getData()
     # if args.cluster:
     #     clusterAnalysis(data, args, explore=args.explore)
-    TS_Analysis(data)
+    #TS_Analysis(data)
 
     data = pd.read_csv("data.csv")
     if args.method=='LSTM':
@@ -89,11 +89,11 @@ def ConfigParser():
             config['General']['enrichment'] = None
         assert isinstance(config['Forecasting']['stepsOut'], int), "StepsOut parameter has to be an integer"
         assert isinstance(config['Forecasting']['stepsIn'], int), "StepsIn parameter has to be an integer"
-        assert all(isinstance(item, int) for item in config['Forecasting']['LSTM']['GridSearchCV']['epochs']), "Epochs parameter has to be an integer number"
-        assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 Regularization parameter has to be a float number"
+        assert all(isinstance(item, int)  for item in config['Forecasting']['LSTM']['GridSearchCV']['epochs']), "Epochs parameter has to be an integer number"
+        assert all(isinstance(item, float) | isinstance(item, int)  for item in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 Regularization parameter has to be a float number"
         assert all(assertBetween(element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['L2']), "L2 has to be between 0 and 1"
-        assert all(isinstance(item, int) for item in config['Forecasting']['LSTM']['GridSearchCV']['batchSize']), "BatchSize parameter has to an integer number"
-        assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout parameter has to be a float number"
+        assert all(isinstance(item, int)  for item in config['Forecasting']['LSTM']['GridSearchCV']['batchSize']), "BatchSize parameter has to an integer number"
+        assert all(isinstance(item, int) | isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout parameter has to be a float number"
         assert all(assertBetween(element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['dropout']), "Dropout has to be between 0 and 1"
         assert all(isinstance(item, float) for item in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate parameter has to be a float number"
         assert all(assertBetween(element, 0, 1) for element in config['Forecasting']['LSTM']['GridSearchCV']['learningRate']), "LearningRate has to be between 0 and 1"
