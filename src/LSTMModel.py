@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error
-from keras.wrappers.scikit_learn import KerasRegressor
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout
 from tensorflow.keras.models import load_model
@@ -11,6 +11,7 @@ from keras.regularizers import l2
 from keras.metrics import mse
 import pandas as pd
 import numpy as np
+import joblib
 import seaborn as sns
 import math
 import os
@@ -27,22 +28,23 @@ class LSTMModel():
             self.bestParams = config['Optimal Parameters']
         else:
             self.optimExists = False
-            self.exploreParams = config['Forecasting']['LSTM']['GridSearchCV']
-        self.testsize = config['Forecasting']['testSize']
+        self.exploreParams = config['Forecasting']['LSTM']['GridSearchCV']
         self.stepsIn = config['Forecasting']['stepsIn']
         self.stepsOut = config['Forecasting']['stepsOut']
         self.gscvDict = config['Forecasting']['LSTM']
+        self.testsize = (self.stepsIn+self.stepsOut)
         if not os.path.exists(exportpath):
             os.mkdir(exportpath)
         self.exportpath = exportpath
         #self.plotTimeSeries(df)
         train_X, train_Y, test_X, test_Y = self.preProcess(df)
+        print(self.inputshape)
         model = self.buildModel(train_X, train_Y)
         #self.evaluatePlot(model, df, train_X, train_Y, test_X, test_Y)
 
 
     def plotTimeSeries(self, df):
-        train_size = int(len(df) * (1-self.testsize))
+        train_size = int(len(df)-self.testSize)
         train, test = df[0:train_size], df[train_size:len(df)]
         plt.figure(figsize=(14, 14), dpi=200)
         plt.plot(train['requests'])
@@ -127,8 +129,9 @@ class LSTMModel():
         print(train_X.shape, train_Y.shape)
         print(self.exploreParams)
         model = KerasRegressor(build_fn=self.compileModel, verbose=self.verbose)
-        grid = GridSearchCV(estimator=model, param_grid=self.exploreParams, n_jobs=-1, return_train_score=True, cv=2)
-        grid_result = grid.fit(train_X, train_Y)
+        grid = GridSearchCV(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
+        with joblib.parallel_backend('threading'):
+            grid_result = grid.fit(train_X, train_Y)
 
         bestParameters = grid_result.best_params_
         bestModel = grid_result.best_estimator_.model

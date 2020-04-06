@@ -10,6 +10,9 @@ class DataLoader():
     def __init__(self, datapath, imputemode, exportpath="../output/Cleaning", weatherpath='../data/lima_2015_weatherdata.csv'):
         warnings.filterwarnings("ignore")
         df = pd.read_csv(datapath, sep='\t')
+        self.datasize = len(df)
+        if self.datasize<50:
+            print("StepsIn+StepsOut should sum to less than 50% of the dataframe size")
         df = self.cleanData(df, imputemode, exportpath)
         df = self.mergeWeatherData(df, weatherpath)
         self.data = df

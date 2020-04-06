@@ -8,8 +8,8 @@ General:
   'resample': 'h'                    # at least 'h' if we want to merge weather data
 
 Forecasting:
-  'stepsOut': 504       # 21 days = 3 weeks
-  'stepsIn': 125         # 7 days = 1 week
+  'stepsIn': 504          # 21 days = 3 weeks
+  'stepsOut': 125         #  7 days = 1 week
   'testSize': 0.2
   'verbose': 0                       # GridSearchCV is parallelized and prints are highly inconsistant
   LSTM:
@@ -25,6 +25,13 @@ Optimal Parameters:
   L2: 0
   batchSize: 32
   dropout: 0.3
+  epochs: 5
+  learningRate: 0.001
+  optimizer: adam
+Optimal Parameters:
+  L2: 0
+  batchSize: 32
+  dropout: 0
   epochs: 5
   learningRate: 0.001
   optimizer: adam

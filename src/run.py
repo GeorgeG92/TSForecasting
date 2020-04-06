@@ -15,11 +15,14 @@ def main(args, config, cluster=False):
     #     clusterAnalysis(data, args, explore=args.explore)
     #TS_Analysis(data)
 
-    data = pd.read_csv("data.csv")
+    data = pd.read_csv("data.csv")                                    # 2 be removed
     if args.method=='LSTM':
-        model = LSTMModel(data, args.train, config)
+        LSTMModel(data, args.train, config)
+    elif args.method=='SARIMAX':
+        SARIMAXModel(data, config)                                    # implement SARIMAX logic
     else:
-        model = None                                     # implement SARIMAX logic
+        SARIMAXModel(data, config)
+        LSTMModel(data, args.train, config)
     return 0
 
 def argParser(argv):
