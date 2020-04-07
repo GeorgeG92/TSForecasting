@@ -9,13 +9,12 @@ General:
 
 Forecasting:
   'stepsIn': 504          # 21 days = 3 weeks
-  'stepsOut': 125         #  7 days = 1 week
-  'testSize': 0.2
+  'stepsOut': 168         #  7 days = 1 week
   'verbose': 0                       # GridSearchCV is parallelized and prints are highly inconsistant
   LSTM:
     'GridSearchCV': {
-        'epochs': [5],
-        'L2': [0, 0.1],
+        'epochs': [5, 10],
+        'L2': [0, 0.1, 0.01],
         'batchSize': [32, 128],
         'dropout': [0, 0.3],
         'learningRate': [0.001, 0.01],
@@ -25,13 +24,6 @@ Optimal Parameters:
   L2: 0
   batchSize: 32
   dropout: 0.3
-  epochs: 5
-  learningRate: 0.001
-  optimizer: adam
-Optimal Parameters:
-  L2: 0
-  batchSize: 32
-  dropout: 0
-  epochs: 5
-  learningRate: 0.001
-  optimizer: adam
+  epochs: 10
+  learningRate: 0.01
+  optimizer: RMSprop
