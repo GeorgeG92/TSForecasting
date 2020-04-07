@@ -2,6 +2,7 @@ from dataLoader import DataLoader
 from clusterAnalysis import clusterAnalysis
 from TS_Analysis import TS_Analysis
 from LSTMModel import LSTMModel
+from SARIMAXModel import SARIMAXModel
 import os
 import sys
 import yaml
@@ -10,11 +11,11 @@ import warnings
 import pandas as pd
 
 def main(args, config, cluster=False):
-    data = DataLoader(args.input, args.impute).getData()
-    if args.cluster:
-        clusterAnalysis(data, args, explore=args.explore)
-    TS_Analysis(data)
-    #data = pd.read_csv("data.csv")                       # 2 be removed
+    # data = DataLoader(args.input, args.impute).getData()
+    # if args.cluster:
+    #     clusterAnalysis(data, args, explore=args.explore)
+    # TS_Analysis(data)
+    data = pd.read_csv("data.csv")                       # 2 be removed
     if args.method=='LSTM':
         LSTMModel(data, args.train, config)
     elif args.method=='SARIMAX':

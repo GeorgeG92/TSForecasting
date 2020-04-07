@@ -1,20 +1,27 @@
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error
+import os
+import logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout
 from tensorflow.keras.models import load_model
 from keras.regularizers import l2
 from keras.metrics import mse
+import tensorflow as tf
+tf.get_logger().setLevel(logging.ERROR)
+logging.getLogger('tensorflow').disabled = True
 import pandas as pd
 import numpy as np
 import joblib
 import seaborn as sns
 import math
-import os
 import yaml
 import warnings
 
@@ -38,9 +45,8 @@ class LSTMModel():
         self.exportpath = exportpath
         #self.plotTimeSeries(df)
         train_X, train_Y, test_X, test_Y = self.preProcess(df)
-        print(self.inputshape)
         model = self.buildModel(train_X, train_Y)
-        #self.evaluatePlot(model, df, train_X, train_Y, test_X, test_Y)
+        self.evaluatePlot(model, df, train_X, train_Y, test_X, test_Y)
 
 
     def plotTimeSeries(self, df):
@@ -75,14 +81,18 @@ class LSTMModel():
         df2 = df[['requests', 'Temperature', 'Precipitation', 'WindSpeed']]
 
         # Scale & Formulate as a Supervised  Learning method
-        scaler = StandardScaler()
-        df2 = pd.DataFrame(scaler.fit_transform(df2), columns=df2.columns)
-        self.scaler = scaler
+        scalers = []
+        for col in df2.columns:
+            scaler = StandardScaler()
+            df2[col] = pd.DataFrame(scaler.fit_transform(np.array(df2[col]).reshape(-1, 1)))
+            scalers.append(scaler)
+
+        self.scaler = scalers[0]
         data = np.array(df2)
         X, Y = split_sequences(data, stepsIn, stepsOut)
 
         # Train/set split
-        trainsize = int((1-testSize)*X.shape[0])             # 85/15 split
+        trainsize = len(df2)-testSize
         train_X = X[:trainsize, :]
         train_Y = Y[:trainsize]
         test_X = X[trainsize:, :]
@@ -95,18 +105,17 @@ class LSTMModel():
 
 
     def compileModel(self, L2, batchSize, dropout, learningRate, optimizer):
-        # LSTM model 1
         input_shape = self.inputshape
         model = Sequential()                           # LSTM input layer MUST be 3D - (samples, timesteps, features)
-        model.add(LSTM(50, activation='relu',
+        model.add(LSTM(20,
                        return_sequences=True,          # necessary for stacked LSTM layers
-                       kernel_regularizer=l2(L2),
                        input_shape=(input_shape[1], input_shape[2])))
-        model.add(LSTM(50, kernel_regularizer=l2(L2), activation='relu'))
+        model.add(LSTM(10))
         model.add(Dropout(dropout))
         model.add(Dense(20, kernel_regularizer=l2(L2)))
         model.add(Dropout(dropout))
-        model.add(Dense(self.stepsOut))
+        model.add(Dense(self.stepsout))
+
         model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=[mse])
         return model
 
@@ -115,19 +124,17 @@ class LSTMModel():
         print("Training model with optimal parameters...")
         batch_size = bp['batchSize']
         epochs = bp['epochs']
-        model = self.model
         history = model.fit(train_X, train_Y,
                                 epochs=epochs, batch_size=batch_size,
                                 verbose=1)
         # enforce model to disk (.h5)
         model.save_weights('../model/LSTM_best_params.h5')
         self.history = history
-        self.plotTrainHistory()
+        #self.plotTrainHistory()
         return model
 
     def gridSearchCV(self, train_X, train_Y):
-        print(train_X.shape, train_Y.shape)
-        print(self.exploreParams)
+        print("Beggining GridSearchCV to discover optimal hyperparameters")
         model = KerasRegressor(build_fn=self.compileModel, verbose=self.verbose)
         grid = GridSearchCV(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
         with joblib.parallel_backend('threading'):
@@ -145,7 +152,6 @@ class LSTMModel():
         BestParamsDict['Optimal Parameters'] = bestParameters
         with open('config.yaml', 'a') as outfile:
             yaml.dump(BestParamsDict, outfile, default_flow_style=False)
-        # plot history
         # history = bestModel.history.history
         return bestModel
 
@@ -157,15 +163,19 @@ class LSTMModel():
                 model = self.compileModel(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
                 model = self.trainOptimal(model, bp, train_X, train_Y)
             else:                                                # GridSearchCV for hyperparameter tuning
-                print("Beggining GridSearchCV to discover optimal hyperparameters")
+
                 model = self.gridSearchCV(train_X, train_Y)
         else:
             if os.path.exists('../model/LSTM_best_params.h5'):       # If a saved model exists, load it
-                print("Loading model weights from Disk...")
+                print("Loading best model weights from Disk...")
                 model = load_model('../model/LSTM_best_params.h5')
             else:
-                print("No saved model detected, forcing Training")
-                model = self.gridSearchCV(train_X, train_Y)
+                if self.optimExists:                                 # Train using optimal parameters
+                    bp = self.bestParams
+                    model = self.compileModel(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
+                    model = self.trainOptimal(model, bp, train_X, train_Y)
+                else:
+                    model = self.gridSearchCV(train_X, train_Y)
         return model
 
 
@@ -185,53 +195,29 @@ class LSTMModel():
 
 
     def evaluatePlot(self, model, df, train_X, train_Y, test_X, test_Y):
-        train_X_array = train_X
-        test_X_array = test_X
+        trainPredict = model.predict(train_X)
+        testPredict = model.predict(test_X)
+
+        # invert predictions
         scaler = self.scaler
+        trainPredict =scaler.inverse_transform(trainPredict)
+        train_Y = scaler.inverse_transform([train_Y])
+        testPredict = scaler.inverse_transform(testPredict)
+        test_Y = scaler.inverse_transform([test_Y])
 
-        trainPredict = np.array(model.predict(train_X_array))         # forecast based on training data
-        testPredict = np.array(model.predict(test_X_array))           # forecast of test (unseen data)
+        test_Y2 = test_Y.reshape(test_Y.shape[2])
+        testPredict2 = testPredict.reshape(testPredict.shape[1])
+        train_Y2 = train_Y.reshape(train_Y.shape[1],train_Y.shape[2])
 
-        print(test_X_array.shape)
-        test_X_array = test_X_array.reshape((test_X_array.shape[0], test_X_array.shape[2]))
+        trainScore = mean_absolute_error(train_Y2, trainPredict)
+        print('Train Score: %.2f MAE' % trainScore)
+        testScore = mean_absolute_error(test_Y2, testPredict2)
+        print('Test Score: %.2f MAE' % testScore)
 
-        # invert scale for train forecast (train)
-        train_X_array = train_X_array.reshape((train_X_array.shape[0], train_X_array.shape[2]))
-        trainPredict = trainPredict.reshape((len(trainPredict), 1))
-        inv_x = np.concatenate((trainPredict, train_X_array[:, 1:]), axis=1)
-        inv_x = scaler.inverse_transform(inv_x)
-        inv_x = inv_x[:,0]
-
-        # invert scaling for forecast (test)
-        inv_yhat = np.concatenate((testPredict, test_X_array[:, 1:]), axis=1)
-        inv_yhat = scaler.inverse_transform(inv_yhat)
-        inv_yhat = inv_yhat[:,0]
-
-        # invert scaling for actual values
-        test_Y_array = test_Y
-        test_Y_array = test_Y_array.reshape((len(test_Y_array), 1))
-        inv_y = np.concatenate((test_Y_array, test_X_array[:, 1:]), axis=1)
-        inv_y = scaler.inverse_transform(inv_y)
-        inv_y = inv_y[:,0]
-
-
-        # calculate RMSE based on original-scaled data
-        rmse = math.sqrt(mean_squared_error(inv_y, inv_yhat))
-        print('\tPerformance (RMSE) on Test Data is : %.3f' % rmse)
-
-
-        ### Merge inv_y with train_Y_pred!
-        wholeforecast = np.concatenate((inv_x, inv_yhat), axis=0)
-        len(wholeforecast)
-
-        # Plot against original data
-        fig, ax1 = plt.subplots(figsize=(14,11))
-        ax1.plot(np.array(df['requests']), label='Actual Requests')
-        ax1.plot(wholeforecast, label = 'Forecasted Requests')
-        plt.axvline(x=(1-self.testsize)*len(df), label='train/test split', c='k')
-        ax1.set_title('Requests vs Time')
-        ax1.set_ylabel('Requests')
-        ax1.set_xlabel('hours')
-        L=ax1.legend() #create and get the legend
-        plt.savefig(self.exportpath+'/actualVSpredicted.jpg')
+        df2 = df[(-self.stepsOut):]
+        df2['predictions'] = testPredict2
+        rcParams['figure.figsize'] = 12, 6
+        plt.plot(df['requests'])
+        plt.plot(df2['predictions'], color='brown')
+        plt.savefig(self.exportpath+'/LSTM_Forecast.jpg')
         plt.close()
