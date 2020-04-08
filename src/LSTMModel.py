@@ -43,6 +43,7 @@ class LSTMModel():
         if not os.path.exists(exportpath):
             os.mkdir(exportpath)
         self.exportpath = exportpath
+        print("LSTM Modeling")
         #self.plotTimeSeries(df)
         train_X, train_Y, test_X, test_Y = self.preProcess(df)
         model = self.buildModel(train_X, train_Y)
@@ -121,7 +122,7 @@ class LSTMModel():
 
 
     def trainOptimal(self, model, params, train_X, train_Y):
-        print("Training model with optimal parameters...")
+        print("\tTraining model with optimal parameters...")
         batch_size = bp['batchSize']
         epochs = bp['epochs']
         history = model.fit(train_X, train_Y,
@@ -134,7 +135,7 @@ class LSTMModel():
         return model
 
     def gridSearchCV(self, train_X, train_Y):
-        print("Beggining GridSearchCV to discover optimal hyperparameters")
+        print("\tBeggining GridSearchCV to discover optimal hyperparameters")
         model = KerasRegressor(build_fn=self.compileModel, verbose=self.verbose)
         grid = GridSearchCV(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
         with joblib.parallel_backend('threading'):
@@ -144,8 +145,8 @@ class LSTMModel():
         bestModel = grid_result.best_estimator_.model
         bestModel.summary()
         bestModel.save('../model/LSTM_best_params.h5', overwrite=True)
-        print("GridSearchCV finished, flashing model to disk and saving best parameters to config...")
-        print("Best parameters:"+str(bestParameters))
+        print("\tGridSearchCV finished, flashing model to disk and saving best parameters to config...")
+        print("\tBest parameters:"+str(bestParameters))
 
         # Save best found parameters to config file
         BestParamsDict= {}
@@ -156,7 +157,7 @@ class LSTMModel():
         return bestModel
 
     def buildModel(self, train_X, train_Y):
-        print("Building model...")
+        print("\tBuilding model...")
         if self.train:
             if self.optimExists:                                 # Train using optimal parameters
                 bp = self.bestParams
@@ -167,7 +168,7 @@ class LSTMModel():
                 model = self.gridSearchCV(train_X, train_Y)
         else:
             if os.path.exists('../model/LSTM_best_params.h5'):       # If a saved model exists, load it
-                print("Loading best model weights from Disk...")
+                print("\tLoading best model weights from Disk...")
                 model = load_model('../model/LSTM_best_params.h5')
             else:
                 if self.optimExists:                                 # Train using optimal parameters
@@ -180,7 +181,7 @@ class LSTMModel():
 
 
     def plotTrainHistory(self, history):
-        print("Exporting Train History...")
+        print("\tExporting Train History...")
         plt.figure(figsize=(9, 7), dpi=200)
         plt.plot(history.history["loss"], 'darkred', label="Train")
         if 'val_loss' in history:
@@ -210,9 +211,9 @@ class LSTMModel():
         train_Y2 = train_Y.reshape(train_Y.shape[1],train_Y.shape[2])
 
         trainScore = mean_absolute_error(train_Y2, trainPredict)
-        print('Train Score: %.2f MAE' % trainScore)
+        print('\tTrain Score: %.2f MAE' % trainScore)
         testScore = mean_absolute_error(test_Y2, testPredict2)
-        print('Test Score: %.2f MAE' % testScore)
+        print('\tTest Score: %.2f MAE' % testScore)
 
         df2 = df[(-self.stepsOut):]
         df2['predictions'] = testPredict2

@@ -23,6 +23,7 @@ def main(args, config, cluster=False):
     else:
         SARIMAXModel(data, config)
         LSTMModel(data, args.train, config)
+    print("Done")
     return 0
 
 def argParser(argv):
