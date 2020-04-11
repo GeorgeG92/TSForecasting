@@ -157,13 +157,18 @@ class SARIMAXModel():
         score = mean_absolute_error(test, testpreds)
         print("\tTest MAE is: "+str(score))
 
-        print(test.index[0])
-        print(type(test.index[0]))
-        plt.clf()
+
+        data.index = pd.to_datetime(data.index)
+        trainpreds.index = pd.to_datetime(trainpreds.index)
+        testpreds.index = pd.to_datetime(testpreds.index)
+
         # Plot Forecast
+        split = data.index[len(train)]
+        plt.clf()
+        plt.title('SARIMAX Forecasting')
         plt.plot(data, color='deepskyblue')
         plt.plot(trainpreds, color='navy')
         plt.plot(testpreds, color='lightcoral')
-        #plt.axvline(test.index[0], label='train/test split', c='mediumvioletred')
+        plt.axvline(split, label='Train/Test split', c='mediumvioletred')
         plt.savefig(self.exportpath+"/SARIMAX_fit.png")
         plt.close()
