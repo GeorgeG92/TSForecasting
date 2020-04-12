@@ -89,6 +89,7 @@ class SARIMAXModel():
         scores = None
         # Full parallel Hyperparameter GridSearchCV
         print("\tStarting GridSearch for best hyperparameters, evaluating "+str(len(pdq))+" models")
+        print("\t\tEstimated Time: "+str(len(pdq)*0.4)+" minutes")
         executor = Parallel(n_jobs=-1, backend='threading')
         tasks = (delayed(scoreSARIMAX)(train, exog_train, cfg) for cfg in pdq)
         scores = executor(tasks)
