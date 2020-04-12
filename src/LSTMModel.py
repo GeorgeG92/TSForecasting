@@ -30,9 +30,9 @@ class LSTMModel():
     def __init__(self, df, train, config, exportpath='../output/LSTM'):
         self.train = train
         self.verbose = config['Forecasting']['verbose']
-        if 'Optimal Parameters' in config:
+        if 'Optimal LSTM Parameters' in config:
             self.optimExists = True
-            self.bestParams = config['Optimal Parameters']
+            self.bestParams = config['Optimal LSTM Parameters']
         else:
             self.optimExists = False
         self.exploreParams = config['Forecasting']['LSTM']['GridSearchCV']
@@ -121,7 +121,7 @@ class LSTMModel():
         return model
 
 
-    def trainOptimal(self, model, params, train_X, train_Y):
+    def trainOptimal(self, model, bp, train_X, train_Y):
         print("\tTraining model with optimal parameters...")
         batch_size = bp['batchSize']
         epochs = bp['epochs']
@@ -129,7 +129,7 @@ class LSTMModel():
                                 epochs=epochs, batch_size=batch_size,
                                 verbose=1)
         # enforce model to disk (.h5)
-        model.save_weights('../model/LSTM_best_params.h5')
+        model.save_weights('../models/LSTM_best_params.h5')
         self.history = history
         #self.plotTrainHistory()
         return model
@@ -144,13 +144,13 @@ class LSTMModel():
         bestParameters = grid_result.best_params_
         bestModel = grid_result.best_estimator_.model
         bestModel.summary()
-        bestModel.save('../model/LSTM_best_params.h5', overwrite=True)
+        bestModel.save('../models/LSTM_best_params.h5', overwrite=True)
         print("\tGridSearchCV finished, flashing model to disk and saving best parameters to config...")
         print("\tBest parameters:"+str(bestParameters))
 
         # Save best found parameters to config file
         BestParamsDict= {}
-        BestParamsDict['Optimal Parameters'] = bestParameters
+        BestParamsDict['Optimal LSTM Parameters'] = bestParameters
         with open('config.yaml', 'a') as outfile:
             yaml.dump(BestParamsDict, outfile, default_flow_style=False)
         # history = bestModel.history.history
@@ -164,12 +164,11 @@ class LSTMModel():
                 model = self.compileModel(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
                 model = self.trainOptimal(model, bp, train_X, train_Y)
             else:                                                # GridSearchCV for hyperparameter tuning
-
                 model = self.gridSearchCV(train_X, train_Y)
         else:
-            if os.path.exists('../model/LSTM_best_params.h5'):       # If a saved model exists, load it
+            if os.path.exists('../models/LSTM_best_params.h5'):       # If a saved model exists, load it
                 print("\tLoading best model weights from Disk...")
-                model = load_model('../model/LSTM_best_params.h5')
+                model = load_model('../models/LSTM_best_params.h5')
             else:
                 if self.optimExists:                                 # Train using optimal parameters
                     bp = self.bestParams

@@ -11,17 +11,16 @@ import warnings
 import pandas as pd
 
 def main(args, config, cluster=False):
-    # data = DataLoader(args.input, args.impute).getData()
-    # if args.cluster:
-    #     clusterAnalysis(data, args, explore=args.explore)
-    # TS_Analysis(data)
-    data = pd.read_csv("data.csv")                       # 2 be removed
+    data = DataLoader(args.input, args.impute).getData()
+    if args.cluster:
+        clusterAnalysis(data, args, explore=args.explore)
+    TS_Analysis(data)
     if args.method=='LSTM':
         LSTMModel(data, args.train, config)
     elif args.method=='SARIMAX':
-        SARIMAXModel(data, config)                       # implement SARIMAX logic
+        SARIMAXModel(data, args.train, config)                       # implement SARIMAX logic
     else:
-        SARIMAXModel(data, config)
+        SARIMAXModel(data, args.train, config)
         LSTMModel(data, args.train, config)
     print("Done")
     return 0

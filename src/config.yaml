@@ -20,10 +20,21 @@ Forecasting:
         'learningRate': [0.001, 0.01],
         'optimizer': ['adam']
       }
-Optimal Parameters:
+  SARIMAX:
+    GridSearchCV: {p: [0, 1, 2, 3], d: [0,1,2], q:[0, 1, 2, 3],
+      P: [0, 1, 2, 3], D: [0, 1, 2], Q: [0, 1, 2, 3], s: [24]}
+Optimal LSTM Parameters:
   L2: 0
   batchSize: 32
   dropout: 0.3
   epochs: 10
   learningRate: 0.01
   optimizer: RMSprop
+Optimal SARIMAX Parameters:
+  p: 1
+  d: 0
+  q: 1
+  P: 1
+  D: 1
+  Q: 1
+  s: 24
