@@ -131,7 +131,7 @@ class LSTMModel():
                                 epochs=epochs, batch_size=batch_size,
                                 verbose=self.verbose)
         # enforce model to disk (.h5)
-        model.save_weights(os.path.join('..', 'models', 'LSTM_best_params.h5'))
+        model.save(os.path.join('..', 'models', 'LSTM_best_params.h5'))
         self.history = history
         #self.plotTrainHistory()
         return model
@@ -170,6 +170,9 @@ class LSTMModel():
         else:
             if os.path.exists(os.path.join('..' ,'models', 'LSTM_best_params.h5')):       # If a saved model exists, load it
                 print("\tLoading best model weights from Disk...")
+                print(os.path.join('..' ,'models', 'LSTM_best_params.h5'))
+                print(os.path.exists(os.path.join('..' ,'models', 'LSTM_best_params.h5')))
+                print(os.path.isfile(os.path.join('..' ,'models', 'LSTM_best_params.h5')))
                 model = load_model(os.path.join('..' ,'models', 'LSTM_best_params.h5'))
             else:
                 if self.optimExists:                                 # Train using optimal parameters
