@@ -80,13 +80,15 @@ class LSTMModel():
 
         computeCols = [col for col in df.columns if col!='request_date']
         df[computeCols] = df[computeCols].astype('float32')
-        df2 = df[['requests', 'Temperature', 'Precipitation', 'WindSpeed']]
+        #df2 = df[['requests', 'Temperature', 'Precipitation', 'WindSpeed']]
 
         # Scale & Formulate as a Supervised  Learning method
         scalers = []
-        for col in df2.columns:
+        df2 = pd.DataFrame(columns = df.columns, index=df.index)
+        for col in df.columns:
+            print(col)
             scaler = StandardScaler()
-            df2[col] = pd.DataFrame(scaler.fit_transform(np.array(df2[col]).reshape(-1, 1)))
+            df2[col] = scaler.fit_transform(np.array(df[col]).reshape(-1, 1))
             scalers.append(scaler)
 
         self.scaler = scalers[0]
