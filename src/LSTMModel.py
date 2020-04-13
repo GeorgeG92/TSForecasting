@@ -86,7 +86,6 @@ class LSTMModel():
         scalers = []
         df2 = pd.DataFrame(columns = df.columns, index=df.index)
         for col in df.columns:
-            print(col)
             scaler = StandardScaler()
             df2[col] = scaler.fit_transform(np.array(df[col]).reshape(-1, 1))
             scalers.append(scaler)
@@ -126,7 +125,6 @@ class LSTMModel():
 
     def trainOptimal(self, model, bp, train_X, train_Y):
         print("\tTraining model with optimal parameters...")
-        print(bp)
         batch_size = bp['batchSize']
         epochs = bp['epochs']
         history = model.fit(train_X, train_Y,
