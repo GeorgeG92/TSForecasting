@@ -21,8 +21,14 @@ Forecasting:
         'optimizer': ['adam']
       }
   SARIMAX:
-    GridSearchCV: {p: [0, 1, 2, 3], d: [0,1,2], q:[0, 1, 2, 3],
-      P: [0, 1, 2, 3], D: [0, 1, 2], Q: [0, 1, 2, 3], s: [24]}
+    GridSearchCV: {
+      p: [0, 1, 2, 3],
+      d: [0,1,2],
+      q:[0, 1, 2, 3],
+      P: [0, 1, 2, 3],
+      D: [0, 1, 2],
+      Q: [0, 1, 2, 3],
+      s: [24]}
 Optimal LSTM Parameters:
   L2: 0
   batchSize: 32

@@ -11,9 +11,11 @@ import warnings
 
 
 class clusterAnalysis():
-    def __init__(self, df, exportpath='../output/Clustering', explore=False):
+    def __init__(self, df, args, explore=False, exportpath=os.path.join('..','output','Clustering')):
+        print("Cluster Analysis")
         warnings.filterwarnings("ignore")
         self.exportpath = exportpath
+        df = self.CleanData(df)
         if explore!=False:
             self.clusterExploration(df, 'source')
             self.clusterExploration(df, 'destination')
@@ -36,7 +38,7 @@ class clusterAnalysis():
             algorithm
         """
         assert kind=='source' or kind=='destination'
-        print("Exploring K for KMeans for "+str(kind)+" coordinates...")
+        print("\tExploring K for KMeans for "+str(kind)+" coordinates...")
         df_geo = df_geo[[str(kind)+'_longitude', str(kind)+'_longitude']]
 
         # Explore K
@@ -51,11 +53,23 @@ class clusterAnalysis():
         plt.title('Error vs K in '+str(kind)+' coordinates')
         if not os.path.exists(self.exportpath):
             os.mkdir(outputfolder)
-        plt.savefig(self.exportpath+'/elbow_rule_'+str(kind)+'.png')
+        plt.savefig(os.path.join(self.exportpath,'elbow_rule_'+str(kind)+'.png'))
         plt.close()
 
+    def CleanData(self, df):
+        """
+        Cleans nan values in columns list to enable K-means
+        Arguments:
+            df: Input dataframe
+            columns (list): 'source' and 'destination'
+        Returns:
+            The clean DataFrame
+        """
+        df = df.dropna(subset=['source_latitude', 'source_longitude', 'destination_longitude', 'destination_latitude'])
+        return df
+
     def clusterData(self, df, k=15):                                    # default after elbow rule
-        print("Performing K-means for both source and destination coordinates with K="+str(k))
+        print("\tPerforming K-means for both source and destination coordinates with K="+str(k))
         kmeans_model = KMeans(n_clusters=k, n_jobs=-1).fit(df[['source_latitude', 'source_longitude']])
         df['sourceCluster'] = kmeans_model.predict(df[['source_latitude', 'source_longitude']])
 
@@ -81,7 +95,7 @@ class clusterAnalysis():
         assert (kind=='source') or (kind=='destination')
         assert os.path.exists(photopath)
 
-        print("Generating Cluster Map for "+str(kind)+" coordinates...")
+        print("\tGenerating Cluster Map for "+str(kind)+" coordinates...")
         clusters = len(df[str(kind)+'Cluster'].unique())
         x = np.arange(clusters+1)                         # used for different colors of clusters
         ys = [i+x+(i*x)**2 for i in range(clusters+1)]
@@ -101,10 +115,10 @@ class clusterAnalysis():
         for k in df[str(kind)+'Cluster'].unique():
             ax.scatter(df[df[str(kind)+'Cluster']==k][str(kind)+'_longitude'],
                        df[df[str(kind)+'Cluster']==k][str(kind)+'_latitude'],
-                       zorder=1, alpha= 0.2, c=[np.random.rand(3,)], s=10)                  # random color
+                       zorder=1, alpha=0.2, c=[np.random.rand(3,)], s=10)                  # random color
         ax.set_title('Plotting Spatial Data on Lima Map')
         ax.set_xlim(BBox[0],BBox[1])
         ax.set_ylim(BBox[2],BBox[3])
         ax.imshow(ruh_m, zorder=0, extent = BBox, aspect= 'equal')
-        fig.savefig(str(self.exportpath)+'/Clustermap_'+str(kind)+'.png')
+        fig.savefig(os.path.join(self.exportpath,'Clustermap_'+str(kind)+'.png'))
         plt.close(fig)

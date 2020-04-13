@@ -27,7 +27,7 @@ import warnings
 
 
 class LSTMModel():
-    def __init__(self, df, train, config, exportpath='../output/LSTM'):
+    def __init__(self, df, train, config, exportpath=os.path.join('..', 'output', 'LSTM')):
         self.train = train
         self.verbose = config['Forecasting']['verbose']
         if 'Optimal LSTM Parameters' in config:
@@ -45,6 +45,7 @@ class LSTMModel():
         self.exportpath = exportpath
         print("LSTM Modeling")
         #self.plotTimeSeries(df)
+        #print(df.isnull().values.any())
         train_X, train_Y, test_X, test_Y = self.preProcess(df)
         model = self.buildModel(train_X, train_Y)
         self.evaluatePlot(model, df, train_X, train_Y, test_X, test_Y)
@@ -57,7 +58,7 @@ class LSTMModel():
         plt.plot(train['requests'])
         plt.plot(test['requests'])
         plt.xticks(rotation=45)
-        plt.savefig(self.exportpath+"/initialplots.png")
+        plt.savefig(os.path.exists(self.exportpath, "initialplots.png"))
         plt.close()
 
     def preProcess(self, df):
@@ -115,7 +116,7 @@ class LSTMModel():
         model.add(Dropout(dropout))
         model.add(Dense(20, kernel_regularizer=l2(L2)))
         model.add(Dropout(dropout))
-        model.add(Dense(self.stepsout))
+        model.add(Dense(self.stepsOut))
 
         model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=[mse])
         return model
@@ -123,13 +124,14 @@ class LSTMModel():
 
     def trainOptimal(self, model, bp, train_X, train_Y):
         print("\tTraining model with optimal parameters...")
+        print(bp)
         batch_size = bp['batchSize']
         epochs = bp['epochs']
         history = model.fit(train_X, train_Y,
                                 epochs=epochs, batch_size=batch_size,
-                                verbose=1)
+                                verbose=self.verbose)
         # enforce model to disk (.h5)
-        model.save_weights('../models/LSTM_best_params.h5')
+        model.save_weights(os.path.join('..', 'models', 'LSTM_best_params.h5'))
         self.history = history
         #self.plotTrainHistory()
         return model
@@ -144,7 +146,7 @@ class LSTMModel():
         bestParameters = grid_result.best_params_
         bestModel = grid_result.best_estimator_.model
         bestModel.summary()
-        bestModel.save('../models/LSTM_best_params.h5', overwrite=True)
+        bestModel.save(os.path.join('..', 'models', 'LSTM_best_params.h5'), overwrite=True)
         print("\tGridSearchCV finished, flashing model to disk and saving best parameters to config...")
         print("\tBest parameters:"+str(bestParameters))
 
@@ -166,9 +168,9 @@ class LSTMModel():
             else:                                                # GridSearchCV for hyperparameter tuning
                 model = self.gridSearchCV(train_X, train_Y)
         else:
-            if os.path.exists('../models/LSTM_best_params.h5'):       # If a saved model exists, load it
+            if os.path.exists(os.path.join('..' ,'models', 'LSTM_best_params.h5')):       # If a saved model exists, load it
                 print("\tLoading best model weights from Disk...")
-                model = load_model('../models/LSTM_best_params.h5')
+                model = load_model(os.path.join('..' ,'models', 'LSTM_best_params.h5'))
             else:
                 if self.optimExists:                                 # Train using optimal parameters
                     bp = self.bestParams
@@ -190,7 +192,7 @@ class LSTMModel():
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.legend()
-        plt.savefig(self.exportpath+'./LeaningCurves.png')
+        plt.savefig(os.path.join(self.exportpath, 'LeaningCurves.png'))
         plt.close()
 
 
@@ -219,5 +221,5 @@ class LSTMModel():
         rcParams['figure.figsize'] = 12, 6
         plt.plot(df['requests'])
         plt.plot(df2['predictions'], color='brown')
-        plt.savefig(self.exportpath+'/LSTM_Forecast.jpg')
+        plt.savefig(os.path.join(self.exportpath, 'LSTM_Forecast.jpg'))
         plt.close()

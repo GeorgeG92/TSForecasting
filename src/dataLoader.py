@@ -7,22 +7,25 @@ import numpy as np
 import warnings
 
 class DataLoader():
-    def __init__(self, datapath, imputemode, exportpath="../output/Cleaning", weatherpath='../data/lima_2015_weatherdata.csv'):
+    def __init__(self, datapath, imputemode, exportpath=os.path.join('..','output','Cleaning'),   #"../output/Cleaning", \
+            weatherpath=os.path.join('..','data','lima_2015_weatherdata.csv')):
+        print("Loading and cleaning the Data")
         warnings.filterwarnings("ignore")
         df = pd.read_csv(datapath, sep='\t')
+        self.origData = df
         self.datasize = len(df)
         if self.datasize<50:
-            print("StepsIn+StepsOut should sum to less than 50% of the dataframe size")
+            print("\tWarning: StepsIn + StepsOut should sum to less than 50% of the dataframe size")
         df = self.cleanData(df, imputemode, exportpath)
         df = self.mergeWeatherData(df, weatherpath)
         self.data = df
-        #save df
 
 
     def getData(self):
-        return self.data
+        return self.data, self.origData
 
     def impute(self, df, imputemode):           # 2 be implemented
+        df = df.dropna()
         return df
         # if imputemode=='fast':
         #     # KNN
@@ -31,7 +34,6 @@ class DataLoader():
         #     # MICE
 
     def cleanData(self, df, imputemode, exportpath):
-        print("Cleaning the Data...")
         sns.set(rc={'figure.figsize':(18,14), 'figure.dpi':50})
         sns.set(font_scale=2.2)
         matplotlib.rcParams.update({'figure.autolayout': True})
@@ -42,27 +44,24 @@ class DataLoader():
 
         if not os.path.exists(exportpath):
             os.mkdir(exportpath)
-        fig = sns_plot.figure.savefig(exportpath+"/missingdata.png")
-        #plt.figure(figsize=(14, 11), dpi=200)
+        fig = sns_plot.figure.savefig(os.path.join(exportpath+"missingdata.png"))
         plt.close(fig)
 
         # Drop columns with > threshold missing values
         colNanThreshold = 20   # %
-        rowNanThreshold = 0.05 #
+        rowNanThreshold = 0.05
         missing = pd.DataFrame((df.isna().mean().round(4) * 100), columns=['percentage']).reset_index()
         dropcols = list(missing[missing['percentage']>=colNanThreshold]['index'])
-
         if len(dropcols):
             print('\tColumns '+str(dropcols)+" have more than "+str(colNanThreshold)+"% nan values, thus get dropped entirely")
             df = df.drop(columns=dropcols)
 
-        # Drop NaN rows based on columns of interest
-        uselessCols = ['ID', 'Name', 'Photo', 'Nationality', 'Flag', 'Club', 'Club Logo', 'Wage', 'Work Rate', 'Body Type', 'Real Face']
-        importantCols = [col for col in df.columns if col not in uselessCols]
+        # Drop NaN rows based on columns useful for forecasting - Aggregation is going to be per time intervals ('h')
+        importantCols = ['request_date']
+
         missingPerc = np.around(len(df[df[importantCols].isnull().any(axis=1)])/len(df)*100, decimals=3)
         if missingPerc<rowNanThreshold:
-            print("\tWe have "+str(missingPerc)+"% missing values so we drop them")    #def loadWeatherData(self):
-            df = df.dropna()
+            print("\tWe have "+str(missingPerc)+"% missing values...")    #def loadWeatherData(self):
         else:
             print("\tWe have more than "+str(rowNanThreshold)+"% missing values, attempting imputation")
             df = self.impute(df, imputemode)
@@ -72,7 +71,7 @@ class DataLoader():
         """
         Hourly sampled dataset with temperature, wind and rain information
         """
-        print("Loading additional weather data...")
+        print("\tLoading additional weather data...")
         assert os.path.exists(weatherpath)
         weatherdf = pd.read_csv(weatherpath)
         return weatherdf

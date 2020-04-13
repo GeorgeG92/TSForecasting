@@ -11,9 +11,9 @@ import warnings
 import pandas as pd
 
 def main(args, config, cluster=False):
-    data = DataLoader(args.input, args.impute).getData()
+    data, df = DataLoader(args.input, args.impute).getData()
     if args.cluster:
-        clusterAnalysis(data, args, explore=args.explore)
+        clusterAnalysis(df, args, explore=args.explore)
     TS_Analysis(data)
     if args.method=='LSTM':
         LSTMModel(data, args.train, config)

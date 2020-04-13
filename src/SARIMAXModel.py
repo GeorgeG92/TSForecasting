@@ -18,7 +18,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAXResults
 from datetime import datetime
 
 class SARIMAXModel():
-    def __init__(self, df, train, config, exportpath='../output/SARIMAX'):
+    def __init__(self, df, train, config, exportpath=os.path.join('..', 'output', 'SARIMAX')):
         self.train = train
         self.stepsOut = config['Forecasting']['stepsOut']
         self.exploreParams = config['Forecasting']['SARIMAX']['GridSearchCV']
@@ -34,7 +34,6 @@ class SARIMAXModel():
         matplotlib.rc('axes', titlesize=22)
         plt.gcf().autofmt_xdate()
 
-        df.set_index('request_date', inplace=True)
         df.index = pd.date_range(df.index[0], df.index[-1], freq='H')
         print("SARIMAX Modeling")
         self.generatePlots(df)
@@ -69,7 +68,7 @@ class SARIMAXModel():
         plt.axhline(y=1.96/np.sqrt(len(data)), linestyle='--', color='gray')
         plt.xlabel('Lag')
         plt.ylabel('PACF')
-        plt.savefig(self.exportpath+'/ACF_PACF_Plot.jpeg')
+        plt.savefig(os.path.join(self.exportpath, 'ACF_PACF_Plot.jpeg'))
 
     def scoreSARIMAX(train, exog_train, params):
         model = SARIMAX(train, order=params[:3], seasonal_order=params[3:], freq='h', exog=exog_train)
@@ -113,22 +112,22 @@ class SARIMAXModel():
         # Train/Test Split
         train, test, exog_train, exog_test = self.trainTestSplit(df, data)
 
-        if os.path.exists('../models/SARIMAX_best_params.p'):                        # if model exists then load, otherwise train on optimal, otherwise GridSearchCV
+        if os.path.exists(os.path.join('..', 'models', 'SARIMAX_best_params.p')):   # if model exists then load, otherwise train on optimal, otherwise GridSearchCV
             print("\tLoading Model from Disk...")
-            result = SARIMAXResults.load('../models/SARIMAX_best_params.p')
+            result = SARIMAXResults.load(os.path.join('..', 'models', 'SARIMAX_best_params.p'))
         elif params:
             print("\tTraining using optimal parameters")
             p,d,q,P,D,Q,s = params['p'], params['d'], params['q'], params['P'], params['D'], params['Q'], params['s']
             model = SARIMAX(train, order=(p,d,q),seasonal_order=(P,D,Q,s), exog=exog_train)
             result = model.fit(disp=False)
-            if not os.path.exists('../models/SARIMAX_best_params.p'):
-                result.save('../models/SARIMAX_best_params.p')
+            if not os.path.exists(os.path.join('..', 'models', 'SARIMAX_best_params.p')):
+                result.save(os.path.join('..', 'models', 'SARIMAX_best_params.p'))
         else:
             bp = self.GridSearchSARIMAX(train, exog_train)
             p,d,q,P,D,Q,s = bp[0], bp[1], bp[2], bp[3], bp[4], bp[5], bp[6]
             model = SARIMAX(train, order=(p,d,q),seasonal_order=(P,D,Q,s), exog=exog_train)
             result = model.fit(disp=False)
-            result.save('../models/SARIMAX_best_params.p')
+            result.save(os.path.join('..', 'models', 'SARIMAX_best_params.p'))
             # Save optimal parameters to config
             # BestParamsDict = {}
             # BestParamsDict['Optimal Parameters'] = bestParameters
@@ -171,11 +170,11 @@ class SARIMAXModel():
         plt.plot(testRescaled, color='deepskyblue')
         plt.fill_between(test.index, lowRestored, upRestored, color='pink')
         plt.title('Forecast')
-        plt.savefig(self.exportpath+'./SARIMAX_Forecast.png')
+        plt.savefig(os.path.join(self.exportpath, 'SARIMAX_Forecast.png'))
         plt.close()
 
         residualPlot = result.plot_diagnostics(figsize = (12, 7), lags=20)
-        residualPlot.savefig(self.exportpath+'./residualPlot.png')
+        residualPlot.savefig(os.path.join(self.exportpath, 'residualPlot.png'))
 
 
     def ModelSARIMAX(self, df):
