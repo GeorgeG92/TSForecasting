@@ -170,9 +170,6 @@ class LSTMModel():
         else:
             if os.path.exists(os.path.join('..' ,'models', 'LSTM_best_params.h5')):       # If a saved model exists, load it
                 print("\tLoading best model weights from Disk...")
-                print(os.path.join('..' ,'models', 'LSTM_best_params.h5'))
-                print(os.path.exists(os.path.join('..' ,'models', 'LSTM_best_params.h5')))
-                print(os.path.isfile(os.path.join('..' ,'models', 'LSTM_best_params.h5')))
                 model = load_model(os.path.join('..' ,'models', 'LSTM_best_params.h5'))
             else:
                 if self.optimExists:                                 # Train using optimal parameters
