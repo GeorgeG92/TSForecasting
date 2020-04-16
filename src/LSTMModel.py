@@ -140,8 +140,7 @@ class LSTMModel():
         print("\tBeggining GridSearchCV to discover optimal hyperparameters")
         model = KerasRegressor(build_fn=self.compileModel, verbose=self.verbose)
         grid = GridSearchCV(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
-        with joblib.parallel_backend('threading'):
-            grid_result = grid.fit(train_X, train_Y)
+        grid_result = grid.fit(train_X, train_Y)
 
         bestParameters = grid_result.best_params_
         bestModel = grid_result.best_estimator_.model
