@@ -2,12 +2,12 @@
 Implementation of an end to end data pipeline from ETL, exploration, preprocessing, to time series forecasting using SARIMAX/LSTM models, built on top of statsmodels and tensorflow.keras.
 Includes parallelized GridSearch, GPU support and multiple Time Series Visualizations as part of the exploration process.
 
-# Run:
+# Run Options:
 a) Using docker-compose
 ```sh
 docker-compose up (--build)
-``
-or install requirements through
+```
+b) install requirements through
 ```sh
 pip install -r requirements.txt
 ```
