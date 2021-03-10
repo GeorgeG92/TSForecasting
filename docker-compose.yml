@@ -1,0 +1,20 @@
+version: '3'
+services:
+  sotfupdater:
+    image: forecastingimage
+    stdin_open: true                # docker run -i
+    tty: true                       # docker run -t
+    build: .
+    command: python ./src/run.py 
+    #runtime: nvidia                          # remove for CPU only execution: will throw error if drivers not installed!
+    container_name: forecastingcontainer
+    volumes:
+     - type: bind         
+       source: ./output
+       target: /output
+     - type: bind
+       source: ./model
+       target: /model
+     # - type: bind
+     #   source: ./model
+     #   target: /model

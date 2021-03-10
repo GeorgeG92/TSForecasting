@@ -6,14 +6,15 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error
 import os
 import logging
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # ERROR           # suppress tensorflow warnings
+logging.getLogger('tensorflow').setLevel(logging.ERROR)     # run before importing tensorflow
 
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout
 from tensorflow.keras.models import load_model
-from keras.regularizers import l2
-from keras.metrics import mse
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.metrics import mse
 import tensorflow as tf
 tf.get_logger().setLevel(logging.ERROR)
 logging.getLogger('tensorflow').disabled = True
@@ -25,34 +26,41 @@ import math
 import yaml
 import warnings
 
+logger = logging.getLogger(__file__)
 
 class LSTMModel():
-    def __init__(self, df, train, config, exportpath=os.path.join('..', 'output', 'LSTM')):
-        self.train = train
+    """  This class implements the code for the LSTM Neural Network
+    """
+    def __init__(self, args, config, df):
+        self.train = args.train
         self.verbose = config['Forecasting']['verbose']
         if 'Optimal LSTM Parameters' in config:
             self.optimExists = True
             self.bestParams = config['Optimal LSTM Parameters']
         else:
             self.optimExists = False
-        self.exploreParams = config['Forecasting']['LSTM']['GridSearchCV']
+        self.exploreParams = config['Forecasting']['LSTM']['grid_search_cv']
         self.stepsIn = config['Forecasting']['stepsIn']
         self.stepsOut = config['Forecasting']['stepsOut']
         self.gscvDict = config['Forecasting']['LSTM']
         self.testsize = (self.stepsIn+self.stepsOut)
-        if not os.path.exists(exportpath):
-            os.mkdir(exportpath)
-        self.exportpath = exportpath
-        print("LSTM Modeling")
-        #self.plotTimeSeries(df)
-        #print(df.isnull().values.any())
-        train_X, train_Y, test_X, test_Y = self.preProcess(df)
-        model = self.buildModel(train_X, train_Y)
-        self.evaluatePlot(model, df, train_X, train_Y, test_X, test_Y)
+        self.exportpath = os.path.join(args.exportpath, 'LSTM')
+        if not os.path.exists(self.exportpath):
+            os.mkdir(self.exportpath)
+        self.modelpath = os.path.join(args.modelpath, 'LSTM_best_params.h5')
+        logger.info("LSTM Modeling")
+        #self.plot_time_series(df)
+        train_X, train_Y, test_X, test_Y = self.pre_process(df)
+        model = self.build_model(train_X, train_Y)
+        self.evaluate_plot(model, df, train_X, train_Y, test_X, test_Y)
 
 
-    def plotTimeSeries(self, df):
-        train_size = int(len(df)-self.testSize)
+    def plot_time_series(self, df):
+        """ Plots time series data
+        Args:
+            df: the dataframe containing the time series data
+        """
+        train_size = int(len(df)-self.testsize)
         train, test = df[0:train_size], df[train_size:len(df)]
         plt.figure(figsize=(14, 14), dpi=200)
         plt.plot(train['requests'])
@@ -61,7 +69,12 @@ class LSTMModel():
         plt.savefig(os.path.exists(self.exportpath, "initialplots.png"))
         plt.close()
 
-    def preProcess(self, df):
+    def pre_process(self, df):
+        """ Performs all the required preprocessing (splitting, casting, scaling)
+            for the model run
+        Args:
+            df: the dataframe containing the time series data
+        """
         def split_sequences(sequences, n_steps_in, n_steps_out):
             X, y = list(), list()
             for i in range(len(sequences)):
@@ -73,10 +86,6 @@ class LSTMModel():
                 X.append(seq_x)
                 y.append(seq_y)
             return np.array(X), np.array(y)
-
-        stepsIn = self.stepsIn
-        stepsOut = self.stepsOut
-        testSize = self.testsize
 
         computeCols = [col for col in df.columns if col!='request_date']
         df[computeCols] = df[computeCols].astype('float32')
@@ -92,10 +101,10 @@ class LSTMModel():
 
         self.scaler = scalers[0]
         data = np.array(df2)
-        X, Y = split_sequences(data, stepsIn, stepsOut)
+        X, Y = split_sequences(data, self.stepsIn, self.stepsOut)
 
         # Train/set split
-        trainsize = len(df2)-testSize
+        trainsize = len(df2)-self.testsize
         train_X = X[:trainsize, :]
         train_Y = Y[:trainsize]
         test_X = X[trainsize:, :]
@@ -107,7 +116,15 @@ class LSTMModel():
 
 
 
-    def compileModel(self, L2, batchSize, dropout, learningRate, optimizer):
+    def compile_model(self, L2, batchSize, dropout, learningRate, optimizer):
+        """ Compiles the model given the input hyperparameters
+        Args:
+            L2: l2 regularization parameter
+            batchSize: the batch size of the model
+            dropout: the dropout rate 
+            learningRate: the learning rate parameter
+            optimizer: which optimizer to use for model training
+        """
         input_shape = self.inputshape
         model = Sequential()                           # LSTM input layer MUST be 3D - (samples, timesteps, features)
         model.add(LSTM(20,
@@ -123,31 +140,43 @@ class LSTMModel():
         return model
 
 
-    def trainOptimal(self, model, bp, train_X, train_Y):
-        print("\tTraining model with optimal parameters...")
+    def train_optimal(self, model, bp, train_X, train_Y):
+        """ Trains the model given a set of optimal hyperparameters
+        Args:
+            model: a keras model instance
+            bp: a dictionary containing the best hyperaparameters
+            train_X: the train data features
+            train_Y: the train data labels
+        """
+        logger.info("\tTraining model with optimal parameters...")
         batch_size = bp['batchSize']
         epochs = bp['epochs']
         history = model.fit(train_X, train_Y,
                                 epochs=epochs, batch_size=batch_size,
                                 verbose=self.verbose)
         # enforce model to disk (.h5)
-        model.save(os.path.join('..', 'models', 'LSTM_best_params.h5'))
+        model.save(self.modelpath)
         self.history = history
-        #self.plotTrainHistory()
+        #self.plot_train_history()
         return model
 
-    def gridSearchCV(self, train_X, train_Y):
-        print("\tBeggining GridSearchCV to discover optimal hyperparameters")
-        model = KerasRegressor(build_fn=self.compileModel, verbose=self.verbose)
-        grid = GridSearchCV(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
+    def grid_search_cv(self, train_X, train_Y):
+        """ Performs grid search cross validation on the train data
+        Args:
+            train_X: the train data features
+            train_Y: the train data labels
+        """
+        logger.info("\tBeggining grid_search_cv to discover optimal hyperparameters")
+        model = KerasRegressor(build_fn=self.compile_model, verbose=self.verbose)
+        grid = grid_search_cv(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
         grid_result = grid.fit(train_X, train_Y)
 
         bestParameters = grid_result.best_params_
         bestModel = grid_result.best_estimator_.model
         bestModel.summary()
-        bestModel.save(os.path.join('..', 'models', 'LSTM_best_params.h5'), overwrite=True)
-        print("\tGridSearchCV finished, flashing model to disk and saving best parameters to config...")
-        print("\tBest parameters:"+str(bestParameters))
+        bestModel.save(os.path.join(self.modelpath), overwrite=True)
+        logger.info("\tgrid_search_cv finished, flashing model to disk and saving best parameters to config...")
+        logger.info("\tBest parameters: {params}".format(bestParameters))
 
         # Save best found parameters to config file
         BestParamsDict= {}
@@ -157,31 +186,40 @@ class LSTMModel():
         # history = bestModel.history.history
         return bestModel
 
-    def buildModel(self, train_X, train_Y):
-        print("\tBuilding model...")
+    def build_model(self, train_X, train_Y):
+        """ Builds the Keras model and trains it or loads it from disk
+        Args:
+            train_X: the train data features
+            train_Y: the train data labels
+        """
+        logger.info("\tBuilding model...")
         if self.train:
             if self.optimExists:                                 # Train using optimal parameters
                 bp = self.bestParams
-                model = self.compileModel(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
-                model = self.trainOptimal(model, bp, train_X, train_Y)
-            else:                                                # GridSearchCV for hyperparameter tuning
-                model = self.gridSearchCV(train_X, train_Y)
+                model = self.compile_model(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
+                model = self.train_optimal(model, bp, train_X, train_Y)
+            else:                                                # grid_search_cv for hyperparameter tuning
+                model = self.grid_search_cv(train_X, train_Y)
         else:
-            if os.path.exists(os.path.join('..' ,'models', 'LSTM_best_params.h5')):       # If a saved model exists, load it
-                print("\tLoading best model weights from Disk...")
-                model = load_model(os.path.join('..' ,'models', 'LSTM_best_params.h5'))
+            if os.path.exists(self.modelpath):       # If a saved model exists, load it
+                logger.info("\tLoading best model weights from Disk...")
+                model = load_model(self.modelpath)
             else:
                 if self.optimExists:                                 # Train using optimal parameters
                     bp = self.bestParams
-                    model = self.compileModel(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
-                    model = self.trainOptimal(model, bp, train_X, train_Y)
+                    model = self.compile_model(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
+                    model = self.train_optimal(model, bp, train_X, train_Y)
                 else:
-                    model = self.gridSearchCV(train_X, train_Y)
+                    model = self.grid_search_cv(train_X, train_Y)
         return model
 
 
-    def plotTrainHistory(self, history):
-        print("\tExporting Train History...")
+    def plot_train_history(self, history):
+        """ Exports graphs of train loss
+        Args:
+            history: a history object returned from the Keras training session
+        """
+        logger.info("\tExporting Train History...")
         plt.figure(figsize=(9, 7), dpi=200)
         plt.plot(history.history["loss"], 'darkred', label="Train")
         if 'val_loss' in history:
@@ -195,7 +233,16 @@ class LSTMModel():
         plt.close()
 
 
-    def evaluatePlot(self, model, df, train_X, train_Y, test_X, test_Y):
+    def evaluate_plot(self, model, df, train_X, train_Y, test_X, test_Y):
+        """ Run Inference and persist plotted results to disk 
+        Args:
+            model: the model to run inference from
+            df: the dataframe containing input data
+            train_X: the train data features
+            train_Y: the train data labels
+            test_X: the test data features
+            test_Y: the test data labels
+        """
         trainPredict = model.predict(train_X)
         testPredict = model.predict(test_X)
 
@@ -211,14 +258,14 @@ class LSTMModel():
         train_Y2 = train_Y.reshape(train_Y.shape[1],train_Y.shape[2])
 
         trainScore = mean_absolute_error(train_Y2, trainPredict)
-        print('\tTrain Score: %.2f MAE' % trainScore)
+        logger.info('\tTrain Score: %.2f MAE' % trainScore)
         testScore = mean_absolute_error(test_Y2, testPredict2)
-        print('\tTest Score: %.2f MAE' % testScore)
+        logger.info('\tTest Score: %.2f MAE' % testScore)
 
         df2 = df[(-self.stepsOut):]
         df2['predictions'] = testPredict2
         rcParams['figure.figsize'] = 12, 6
         plt.plot(df['requests'])
         plt.plot(df2['predictions'], color='brown')
-        plt.savefig(os.path.join(self.exportpath, 'LSTM_Forecast.jpg'))
+        plt.savefig(os.path.join(self.exportpath, 'LSTM_Forecast.png'))
         plt.close()

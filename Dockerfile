@@ -1,5 +1,11 @@
-FROM python:3.7-alpine
-COPY ./requirements.txt:./requirements.txt
+FROM tensorflow/tensorflow:2.3.0-gpu
+
+COPY ./requirements.txt ./requirements.txt
+
 RUN pip install -r requirements.txt
-COPY ./data:./data
-CMD ["python", "src/run.py"]
+
+COPY ./config ./config
+
+COPY ./data ./data
+
+COPY ./src ./src

@@ -1,16 +1,11 @@
-# config.yaml
-
 General:
-  'input': '../data/routes.csv'
-  'enrichment': '../data/lima_2015_weatherdata.csv'
   'cleanColumnsThresold': 0.3
-  'imputation': 'KNN'                # 'KNN'/'MICE' in case -i is given
   'resample': 'h'                    # at least 'h' if we want to merge weather data
 
 Forecasting:
   'stepsIn': 504          # 21 days = 3 weeks
   'stepsOut': 168         #  7 days = 1 week
-  'verbose': 0                       # GridSearchCV is parallelized and prints are highly inconsistant
+  'verbose': 0            # GridSearchCV is parallelized and prints are highly inconsistant
   LSTM:
     'GridSearchCV': {
         'epochs': [5, 10],
@@ -24,7 +19,7 @@ Forecasting:
     GridSearchCV: {
       p: [0, 1, 2, 3],
       d: [0,1,2],
-      q:[0, 1, 2, 3],
+      q: [0, 1, 2, 3],
       P: [0, 1, 2, 3],
       D: [0, 1, 2],
       Q: [0, 1, 2, 3],
