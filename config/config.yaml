@@ -24,18 +24,3 @@ Forecasting:
       D: [0, 1, 2],
       Q: [0, 1, 2, 3],
       s: [24]}
-Optimal LSTM Parameters:
-  L2: 0
-  batchSize: 32
-  dropout: 0.3
-  epochs: 10
-  learningRate: 0.01
-  optimizer: RMSprop
-Optimal SARIMAX Parameters:
-  p: 1
-  d: 0
-  q: 1
-  P: 1
-  D: 1
-  Q: 1
-  s: 24
