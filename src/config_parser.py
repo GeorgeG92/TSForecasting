@@ -45,15 +45,15 @@ def config_parser(args):
 						logger.warning("Mode is set to use optimal parameters for LSTM training but {conf} is malformed".format(conf=args.configoptname))
 						args.useoptimalparams = False
 					else:
-						config['Optimal LSTM Parameters:'] = configOpt['Optimal LSTM Parameters:']
+						config['Optimal LSTM Parameters'] = configOpt['Optimal LSTM Parameters']
 			else:
 				if not 'Optimal SARIMAX Parameters' in configOpt:
 					logger.warning("Mode is set to use optimal parameters for SARIMAX training but {conf} is malformed".format(conf=args.configoptname))
 					args.useoptimalparams = False
 				else:
-					if not all (k in configOpt['Optimal SARIMAX Parameters'] for k in ("p", "d", 'q', 'P', 'D', 'Q', 'S')): 
+					if not all (k in configOpt['Optimal SARIMAX Parameters'] for k in ("p", "d", 'q', 'P', 'D', 'Q', 's')): 
 						logger.warning("Mode is set to use optimal parameters for SARIMAX training but {conf} is malformed".format(conf=args.configoptname))
 						args.useoptimalparams = False
 					else:
-						config['Optimal SARIMAX Parameters:'] = configOpt['Optimal SARIMAX Parameters:']
+						config['Optimal SARIMAX Parameters'] = configOpt['Optimal SARIMAX Parameters']
 	return config

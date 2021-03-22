@@ -6,8 +6,9 @@ Optimal LSTM Parameters:
   learningRate: 0.01
   optimizer: RMSprop
 Optimal SARIMAX Parameters:
-  p: 1
-  q: 1
+  p: 3
+  d: 0
+  q: 3
   P: 1
   D: 1
   Q: 1

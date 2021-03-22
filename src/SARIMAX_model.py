@@ -35,11 +35,11 @@ class SARIMAXModel():
         self.exportpath = os.path.join(args.exportpath, 'SARIMAX')
         self.modelpath = os.path.join(args.modelpath, 'SARIMAX_best_params.p')
         self.useoptim = args.useoptimalparams
-        if self.useoptim:
-            self.bestparams = config['Optimal SARIMAX Parameters:']
-        if 'Optimal SARIMAX Parameters' in config:
+        if self.useoptim and 'Optimal SARIMAX Parameters' in config:
+            self.bestparams = config['Optimal SARIMAX Parameters']
             self.optimExists = True
-            self.bestParams = config['Optimal SARIMAX Parameters']
+        else:
+            self.optimExists = False
         rcParams['figure.figsize'] = 12, 6
         rcParams.update({'figure.autolayout': True})
         matplotlib.rc('font', size=14)

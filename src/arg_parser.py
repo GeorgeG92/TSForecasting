@@ -4,8 +4,6 @@ import yaml
 import argparse
 import logging
 
-logger = logging.getLogger(__file__)
-
 
 def arg_parser(argv):
 	"""This function implements an argument parser
@@ -71,15 +69,20 @@ def arg_parser(argv):
 						default='lima_2015_weatherdata.csv',
 						help='The name of the config file')
 
-
-	args = parser.parse_args(argv[1:])                                           # exclude filename
+	args = parser.parse_args(argv[1:]) 
+	logging.basicConfig(level=getattr(logging, args.logging_level), 
+		format="%(asctime)s|%(filename)-20.20s||%(funcName)-20.20s|%(levelname)-8.8s|%(message)s")
+		#format="%(asctime)s|%(filename)-20.20s|%(levelname)-8.8s|%(message)s")
+		#format='%(asctime)s | %(levelname)8s | %(filename)s:%(funcName)30s | %(message)s')
+	logger = logging.getLogger(__file__)
+											  # exclude filename
 	if args.train:
 		if args.method=='LSTM' and not os.path.exists(args.modelpath):
-			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.exists(os.path.join(rgs.modelpath, 'SARIMAX_best_params.p'))))
+			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.join(rgs.modelpath, 'SARIMAX_best_params.p')))
 			logger.warning("Setting train to True")
 			args.train=True
 		else:
-			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.exists(os.path.join(args.modelpath, 'SARIMAX_best_params.p'))))
+			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.join(args.modelpath, 'SARIMAX_best_params.p')))
 			logger.warning("Setting train to True")
 			#assert os.path.exists(args.modelpath, 'SARIMAX_best_params.p'), "Train is set to False but model doesn't exist at {p}".format(p=os.path.exists(args.modelpath, 'SARIMAX_best_params.p'))
 			args.train = True

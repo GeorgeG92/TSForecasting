@@ -30,6 +30,5 @@ def main(args, config):
 if __name__== "__main__":
     args = arg_parser(sys.argv)
     config = config_parser(args)
-    logging.basicConfig(level=getattr(logging, args.logging_level), 
-        format='%(asctime)s | %(levelname)-8s | %(filename)s:%(funcName)-30s | %(message)s')
+    logger = logging.getLogger(__file__)
     main(args, config)
