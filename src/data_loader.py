@@ -37,14 +37,21 @@ class DataLoader():
         return self.data, self.origData
 
     def impute(self, df):           
-        """ 2 be implemented"""
+        """ to be implemented"""
         # if self.inputemethod=='fast':
         # KNN
-        # else:
-        # MICE
         return df.dropna()
 
     def clean_data(self, df):
+        """
+        Checks the data for missing values and imputes/cleans them based on method defined in 
+            execution arguments
+        Args:
+            df: the pandas dataframe containing the data
+        Returns:
+            a dataframe of the cleaned/imputed dataset
+        """
+        # Visualize missing values and export plot
         sns.set(rc={'figure.figsize':(18,14), 'figure.dpi':50})
         sns.set(font_scale=2.2)
         matplotlib.rcParams.update({'figure.autolayout': True})
@@ -78,7 +85,9 @@ class DataLoader():
 
     def load_weather_data(self):
         """
-        Hourly sampled dataset with temperature, wind and rain information
+        Loads the Hourly sampled dataset with temperature, wind and rain information
+        Returns:
+            a dataframe containing weather data
         """
         logger.info("\tLoading additional weather data...")
         weatherdf = pd.read_csv(self.extfilepath)
@@ -89,8 +98,15 @@ class DataLoader():
         return weatherdf
 
     def merge_weather_data(self, df):
+        """
+        Merges weather data to the original flight bookings data
+        Args:
+            df: a pandas dataframe of the original flight bookings data
+        Returns:
+            a pandas dataframe containing the joined data
+        """
+        #Load and resample df to a frequency of an hour
         dfw = self.load_weather_data()
-        #Resample df to a frequency of an hour
         df["request_date"]= pd.to_datetime(df["request_date"])
         df = df.resample('h', on = 'request_date').count()              # read frequency from config
         df = df.rename(columns={'passenger_id': 'requests'})
