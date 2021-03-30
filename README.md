@@ -17,6 +17,6 @@ python run.py
 
 
 # Notes:
-a) User has the option to edit the optimal_parameters.yaml file to broaden/shorten the range of hyperparameters that will be evaluated during the cross validation process.
-b) SARIMAX GridSearch CV can take a long time to execute when a wide set of parameters to explore is set. Current optimal parameter range has been defined based on the analysis performed in notebooks/SARIMAX.ipynb notebook. 
-c) In case of execution on a CUDA-enabled machine, to enable GPU acceleration for LSTM training, uncomment line 9 in docker-compose.yml (runtime: nvidia)
+- User has the option to edit the optimal_parameters.yaml file to broaden/shorten the range of hyperparameters that will be evaluated during the cross validation process.
+- SARIMAX GridSearch CV can take a long time to execute when a wide set of parameters to explore is set. Current optimal parameter range has been defined based on the analysis performed in notebooks/SARIMAX.ipynb notebook. 
+- In case of execution on a CUDA-enabled machine, to enable GPU acceleration for LSTM training, uncomment line 9 in docker-compose.yml (runtime: nvidia)
