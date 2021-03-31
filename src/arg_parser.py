@@ -21,7 +21,7 @@ def arg_parser(argv):
 	parser.add_argument('-m', '--method', default='SARIMAX', dest='method',
 						help='Set forecasting method', choices=['LSTM', 'SARIMAX'])
 
-	parser.add_argument('-t','--train', action='store_true', default=True,       
+	parser.add_argument('-t','--train', action='store_true', default=False,       
 					 help='Retrain model with GridSearchCV')
 
 	parser.add_argument('-c','--cluster', action='store_true', default=False,

@@ -40,7 +40,7 @@ class SARIMAXModel():
 			self.optimExists = True
 		else:
 			self.optimExists = False
-		rcParams['figure.figsize'] = 12, 6
+		rcParams['figure.figsize'] = 15, 8
 		rcParams.update({'figure.autolayout': True})
 		matplotlib.rc('font', size=14)
 		matplotlib.rc('axes', titlesize=22)
@@ -215,22 +215,27 @@ class SARIMAXModel():
 		"""
 		# Plot
 		logger.info("\tExporting Forecast and Residual plots... ")
-		plt.figure(figsize=(15,7))
+		plt.figure(figsize=(15,10))
 		plt.subplot(211)
-		plt.plot(self.dataRescaled, color='deepskyblue')
-		plt.plot(self.trainpredsRescaled, color='navy')
-		plt.plot(self.testpredsRescaled, color='lightcoral')
-		plt.title('TS')
+		plt.plot(self.dataRescaled, color='deepskyblue', label='Flight bookings')
+		plt.plot(self.trainpredsRescaled, color='navy', label='Train Prediction')
+		plt.plot(self.testpredsRescaled, color='lightcoral', label='Test Prediction')
+		plt.title('TS', fontdict = {'fontsize' : 30})
+		plt.xticks(fontsize=14, rotation=45)
+		plt.yticks(fontsize=14)
+		plt.legend(loc="upper left")
 		plt.axvline(x=self.test.index[0], label='train/test split', c='mediumvioletred')
 		plt.subplot(212)
 		plt.plot(self.testpredsRescaled, color='lightcoral')
 		plt.plot(self.testRescaled, color='deepskyblue')
 		plt.fill_between(self.test.index, self.lowRestored, self.upRestored, color='pink')
-		plt.title('Forecast')
+		plt.title('Forecast', fontdict = {'fontsize' : 30})
+		plt.xticks(fontsize=14, rotation=45)
+		plt.yticks(fontsize=14)
 		plt.savefig(os.path.join(self.exportpath, 'SARIMAX_Forecast.png'))
 		plt.close()
 
-		residualPlot = self.result.plot_diagnostics(figsize = (15, 8), lags=20)
+		residualPlot = self.result.plot_diagnostics(figsize = (15, 10), lags=20)
 		residualPlot.savefig(os.path.join(self.exportpath, 'residualPlot.png'))
 
 	def model_sarimax(self):
