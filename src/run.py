@@ -15,9 +15,9 @@ def main(args, config):
     data, df = DataLoader(args).process_data()
     if args.cluster:
         clusterAnalysis(args, df)
-    TS_Analysis(args, data)
+    #TS_Analysis(args, data)
     if args.method=='LSTM':
-        LSTMModel(args, config, data)
+        LSTMModel(args, config).model_LSTM(data)
     elif args.method=='SARIMAX':
         SARIMAXModel(args, config, data).model_sarimax()                  
     else:

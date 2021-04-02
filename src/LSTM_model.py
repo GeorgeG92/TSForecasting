@@ -31,7 +31,7 @@ logger = logging.getLogger(__file__)
 class LSTMModel():
 	"""  This class implements the code for the LSTM Neural Network
 	"""
-	def __init__(self, args, config, df):
+	def __init__(self, args, config):
 		self.train = args.train
 		self.verbose = config['Forecasting']['verbose']
 		if 'Optimal LSTM Parameters' in config:
@@ -39,7 +39,9 @@ class LSTMModel():
 			self.bestParams = config['Optimal LSTM Parameters']
 		else:
 			self.optimExists = False
-		self.exploreParams = config['Forecasting']['LSTM']['grid_search_cv']
+		self.indexCol = 'request_date'
+		self.targetCol = 'requests'
+		self.exploreParams = config['Forecasting']['LSTM']['GridSearchCV']
 		self.stepsIn = config['Forecasting']['stepsIn']
 		self.stepsOut = config['Forecasting']['stepsOut']
 		self.gscvDict = config['Forecasting']['LSTM']
@@ -48,28 +50,22 @@ class LSTMModel():
 		if not os.path.exists(self.exportpath):
 			os.mkdir(self.exportpath)
 		self.modelpath = os.path.join(args.modelpath, 'LSTM_best_params.h5')
-		logger.info("LSTM Modeling")
-		#self.plot_time_series(df)
-		train_X, train_Y, test_X, test_Y = self.pre_process(df)
-		model = self.build_model(train_X, train_Y)
-		self.evaluate_plot(model, df, train_X, train_Y, test_X, test_Y)
+		
 
-
-	def plot_time_series(self, df):
-		""" Plots time series data
-		Args:
-			df: the dataframe containing the time series data
+	def model_LSTM(self, df):
 		"""
-		train_size = int(len(df)-self.testsize)
-		train, test = df[0:train_size], df[train_size:len(df)]
-		plt.figure(figsize=(14, 14), dpi=200)
-		plt.plot(train['requests'])
-		plt.plot(test['requests'])
-		plt.xticks(rotation=45)
-		plt.savefig(os.path.exists(self.exportpath, "initialplots.png"))
-		plt.close()
+		Handles the process of training and evaluating the LSTM model
+		Args:
+			df: the pandas dataframe containing the data
+		"""
+		logger.info("LSTM Modeling")
+		self.df = df
+		self.train_X, self.train_Y, self.test_X, self.test_Y = self.preprocess_data(self.df)
+		#self.train_model()
+		self.train_model()
+		self.evaluate_plot()
 
-	def pre_process(self, df):
+	def preprocess_data(self, df):
 		""" Performs all the required preprocessing (splitting, casting, scaling)
 			for the model run
 		Args:
@@ -87,9 +83,8 @@ class LSTMModel():
 				y.append(seq_y)
 			return np.array(X), np.array(y)
 
-		computeCols = [col for col in df.columns if col!='request_date']
+		computeCols = [col for col in df.columns if col!=self.indexCol]
 		df[computeCols] = df[computeCols].astype('float32')
-		#df2 = df[['requests', 'Temperature', 'Precipitation', 'WindSpeed']]
 
 		# Scale & Formulate as a Supervised  Learning method
 		scalers = []
@@ -140,7 +135,7 @@ class LSTMModel():
 		return model
 
 
-	def train_optimal(self, model, bp, train_X, train_Y):
+	def train_optimal(self, bp):
 		""" Trains the model given a set of optimal hyperparameters
 		Args:
 			model: a keras model instance
@@ -151,25 +146,21 @@ class LSTMModel():
 		logger.info("\tTraining model with optimal parameters...")
 		batch_size = bp['batchSize']
 		epochs = bp['epochs']
-		history = model.fit(train_X, train_Y,
+		history = self.model.fit(self.train_X, self.train_Y,
 								epochs=epochs, batch_size=batch_size,
 								verbose=self.verbose)
 		# enforce model to disk (.h5)
 		model.save(self.modelpath)
 		self.history = history
-		#self.plot_train_history()
 		return model
 
-	def grid_search_cv(self, train_X, train_Y):
+	def grid_search_cv(self):
 		""" Performs grid search cross validation on the train data
-		Args:
-			train_X: the train data features
-			train_Y: the train data labels
 		"""
 		logger.info("\tBeggining grid_search_cv to discover optimal hyperparameters")
 		model = KerasRegressor(build_fn=self.compile_model, verbose=self.verbose)
 		grid = grid_search_cv(estimator=model, param_grid=self.exploreParams, n_jobs=-1, cv=2) #return_train_score=True,
-		grid_result = grid.fit(train_X, train_Y)
+		grid_result = grid.fit(self.train_X, self.train_Y)
 
 		bestParameters = grid_result.best_params_
 		bestModel = grid_result.best_estimator_.model
@@ -183,48 +174,37 @@ class LSTMModel():
 			configOpt = yaml.load(file, Loader=yaml.FullLoader)
 			configOpt['Optimal LSTM Parameters'] = bestParameters
 			yaml.dump(configOpt, outfile, default_flow_style=False)
-		# history = bestModel.history.history
+		self.history = bestModel.history.history
 		return bestModel
 
-	def build_model(self, train_X, train_Y):
-		""" Builds the Keras model and trains it or loads it from disk
-		Args:
-			train_X: the train data features
-			train_Y: the train data labels
+	def train_model(self):
+		""" Builds a new Keras model and trains it or loads existing from disk
 		"""
 		logger.info("\tBuilding model...")
-		if self.train:
+		if (not self.train) & os.path.exists(self.modelpath):
+			self.model = load_model(self.modelpath)
+			print(self.history)
+		else:
 			if self.optimExists:                                 # Train using optimal parameters
 				bp = self.bestParams
-				model = self.compile_model(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
-				model = self.train_optimal(model, bp, train_X, train_Y)
-			else:                                                # grid_search_cv for hyperparameter tuning
-				model = self.grid_search_cv(train_X, train_Y)
-		else:
-			if os.path.exists(self.modelpath):       # If a saved model exists, load it
-				logger.info("\tLoading best model weights from Disk...")
-				model = load_model(self.modelpath)
+				self.model = self.compile_model(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
+				self.model = self.train_optimal(bp)
+				self.plot_train_history()
 			else:
-				if self.optimExists:                                 # Train using optimal parameters
-					bp = self.bestParams
-					model = self.compile_model(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
-					model = self.train_optimal(model, bp, train_X, train_Y)
-				else:
-					model = self.grid_search_cv(train_X, train_Y)
-		return model
+				self.model = self.grid_search_cv()
+				self.plot_train_history()
+		
 
-
-	def plot_train_history(self, history):
+	def plot_train_history(self):
 		""" Exports graphs of train loss
 		Args:
 			history: a history object returned from the Keras training session
 		"""
 		logger.info("\tExporting Train History...")
 		plt.figure(figsize=(9, 7), dpi=200)
-		plt.plot(history.history["loss"], 'darkred', label="Train")
+		plt.plot(self.history["loss"], 'darkred', label="Train")
 		if 'val_loss' in history:
-			plt.plot(history.history["val_loss"], 'darkblue', label="Validation")
-		#plt.plot(history.history["val_loss"], 'darkblue', label="Test")
+			plt.plot(self.history["val_loss"], 'darkblue', label="Validation")
 		plt.title("Loss over epoch")
 		plt.xlabel('Epoch')
 		plt.ylabel('Loss')
@@ -233,39 +213,31 @@ class LSTMModel():
 		plt.close()
 
 
-	def evaluate_plot(self, model, df, train_X, train_Y, test_X, test_Y):
+	def evaluate_plot(self):
 		""" Run Inference and persist plotted results to disk 
-		Args:
-			model: the model to run inference from
-			df: the dataframe containing input data
-			train_X: the train data features
-			train_Y: the train data labels
-			test_X: the test data features
-			test_Y: the test data labels
 		"""
-		trainPredict = model.predict(train_X)
-		testPredict = model.predict(test_X)
+		trainPredict = self.model.predict(self.train_X)
+		testPredict = self.model.predict(self.test_X)
 
 		# invert predictions
-		scaler = self.scaler
-		trainPredict =scaler.inverse_transform(trainPredict)
-		train_Y = scaler.inverse_transform([train_Y])
-		testPredict = scaler.inverse_transform(testPredict)
-		test_Y = scaler.inverse_transform([test_Y])
+		trainPredict =self.scaler.inverse_transform(trainPredict)
+		self.train_Y = self.scaler.inverse_transform([self.train_Y])
+		testPredict = self.scaler.inverse_transform(testPredict)
+		self.test_Y = self.scaler.inverse_transform([self.test_Y])
 
-		test_Y2 = test_Y.reshape(test_Y.shape[2])
+		test_Y2 = self.test_Y.reshape(self.test_Y.shape[2])
 		testPredict2 = testPredict.reshape(testPredict.shape[1])
-		train_Y2 = train_Y.reshape(train_Y.shape[1],train_Y.shape[2])
+		train_Y2 = self.train_Y.reshape(self.train_Y.shape[1], self.train_Y.shape[2])
 
 		trainScore = mean_absolute_error(train_Y2, trainPredict)
 		logger.info('\tTrain Score: %.2f MAE' % trainScore)
 		testScore = mean_absolute_error(test_Y2, testPredict2)
 		logger.info('\tTest Score: %.2f MAE' % testScore)
 
-		df2 = df[(-self.stepsOut):]
+		df2 = self.df[(-self.stepsOut):]
 		df2['predictions'] = testPredict2
 		rcParams['figure.figsize'] = 12, 6
-		plt.plot(df['requests'])
+		plt.plot(self.df[self.targetCol])
 		plt.plot(df2['predictions'], color='brown')
 		plt.savefig(os.path.join(self.exportpath, 'LSTM_Forecast.png'))
 		plt.close()

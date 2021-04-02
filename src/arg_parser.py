@@ -18,7 +18,7 @@ def arg_parser(argv):
 						default='info', help='set logging level',
 						choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 
-	parser.add_argument('-m', '--method', default='SARIMAX', dest='method',
+	parser.add_argument('-m', '--method', default='LSTM', dest='method', type=str.upper,
 						help='Set forecasting method', choices=['LSTM', 'SARIMAX'])
 
 	parser.add_argument('-t','--train', action='store_true', default=False,       
