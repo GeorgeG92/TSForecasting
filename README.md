@@ -8,7 +8,7 @@ Extract the data from data/routes.rar and run either:
 ```sh
 docker-compose up (--build)
 ```
-2. Without using Docker
+2. Without using Docker, create a new conda/pyenv environment and run:
 ```sh
 pip install -r requirements.txt
 cd src
