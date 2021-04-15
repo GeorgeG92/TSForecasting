@@ -28,27 +28,21 @@ logger = logging.getLogger(__file__)
 class SARIMAXModel():
 	""" Implements the SARIMAX model class 
 	"""
-	def __init__(self, args, config, df):
-		self.trainmodel = args.train
+	def __init__(self, args, config):
+		self.trainmodel = (args.train==True)
 		self.stepsOut = config['Forecasting']['stepsOut']
 		self.exploreParams = config['Forecasting']['SARIMAX']['GridSearchCV']
 		self.exportpath = os.path.join(args.exportpath, 'SARIMAX')
 		self.modelpath = os.path.join(args.modelpath, args.modelnamesarimax)
-		self.useoptim = args.useoptimalparams
-		if self.useoptim and 'Optimal SARIMAX Parameters' in config:
+		self.gridsearch = args.gridsearch
+		if not self.gridsearch:
 			self.bestparams = config['Optimal SARIMAX Parameters']
-			self.optimExists = True
-		else:
-			self.optimExists = False
 		rcParams['figure.figsize'] = 15, 8
 		rcParams.update({'figure.autolayout': True})
 		matplotlib.rc('font', size=14)
 		matplotlib.rc('axes', titlesize=22)
 		plt.gcf().autofmt_xdate()
-
-		self.df = df
-		self.df.index = pd.date_range(df.index[0], df.index[-1], freq='H')
-
+		print(self.trainmodel)
 
 	def generate_plots(self, df):
 		""" Generates the ACF/PACF plots for the timeseries
@@ -141,23 +135,13 @@ class SARIMAXModel():
 		""" 
 		Trains a (series of) SARIMAX model(s) on the train data based on given configuration
 		"""
-
-		# Log Transform to battle Heteroscedasticity
-		self.data = np.log(self.df['requests'])
-		# Train/Test Split
-		#train, test, exog_train, exog_test = self.train_test_split(self.df, data)
-		self.train_test_split()
-
-		if not self.trainmodel:
-			logger.info("\tLoading Model from Disk...")
-			self.result = SARIMAXResults.load(self.modelpath)
-		elif self.useoptim:
+		if not self.gridsearch:
 			logger.info("\tTraining using optimal parameters")
 			p,d,q,P,D,Q,s = self.bestparams['p'], self.bestparams['d'], self.bestparams['q'], self.bestparams['P'], self.bestparams['D'], self.bestparams['Q'], self.bestparams['s']
 			self.model = SARIMAX(self.train, order=(p,d,q),seasonal_order=(P,D,Q,s), exog=self.exog_train)
 			self.result = self.model.fit(disp=False)
 			if not os.path.exists(self.modelpath):
-				result.save(self.modelpath)
+				self.result.save(self.modelpath)
 		else:
 			logger.info("\tGridSearchCV SARIMAX to detect optimal parameters")
 			start = time.time()
@@ -238,11 +222,24 @@ class SARIMAXModel():
 		residualPlot = self.result.plot_diagnostics(figsize = (15, 10), lags=20)
 		residualPlot.savefig(os.path.join(self.exportpath, 'residualPlot.png'))
 
-	def fit_predict(self):
+	def fit_predict(self, df):
 		""" Responsible for the train/inference pipeline of the model
 		Args:
 			df: the dataframe containing the time series data
 		"""
 		logger.info("SARIMAX Modeling")
-		self.train_sarimax()
+		self.df = df
+		self.df.index = pd.date_range(df.index[0], df.index[-1], freq='H')
+
+
+		# Log Transform to battle Heteroscedasticity
+		self.data = np.log(self.df['requests'])
+		# Train/Test Split
+		#train, test, exog_train, exog_test = self.train_test_split(self.df, data)
+		self.train_test_split()
+		if not self.trainmodel:
+			logger.info("\tLoading Model from Disk...")
+			self.result = SARIMAXResults.load(self.modelpath)
+		else:
+			self.train_sarimax()
 		self.predict_sarimax()
