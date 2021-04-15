@@ -18,11 +18,14 @@ def arg_parser(argv):
 						default='info', help='set logging level',
 						choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 
-	parser.add_argument('-m', '--method', default='LSTM', dest='method', type=str.upper,
+	parser.add_argument('-m', '--method', default='SARIMAX', dest='method', type=str.upper,
 						help='Set forecasting method', choices=['LSTM', 'SARIMAX'])
 
 	parser.add_argument('-t','--train', action='store_true', default=False,       
-					 help='Retrain model with GridSearchCV')
+					 help='Retrain model or load from disk')
+
+	parser.add_argument('-g','--gridsearch', action='store_true', default=False,       
+					 help='Retrain using GridSearchCV or use best found user-defined parameters')
 
 	parser.add_argument('-c','--cluster', action='store_true', default=False,
 					 help='Cluster the data on Lima map')
@@ -46,8 +49,16 @@ def arg_parser(argv):
 						help='The name of the data file')
 
 	parser.add_argument('--modelpath', dest='modelpath',
-						default=os.path.join('..', 'model'),
+						default=os.path.join('..', 'models'),
 						help='The path to the model directory')
+
+	parser.add_argument('--modelnamesarimax', dest='modelnamesarimax',
+						default='SARIMAX_best_params.p',
+						help='The name of the SARIMAX model')
+
+	parser.add_argument('--modelnamelstm', dest='modelnamelstm',
+						default='LSTM_best_params.h5',
+						help='The name of the LSTM model')
 
 	parser.add_argument('--configpath', dest='configpath',
 						default=os.path.join('..','config'),

@@ -17,12 +17,12 @@ def main(args, config):
         clusterAnalysis(args, df)
     #TS_Analysis(args, data)
     if args.method=='LSTM':
-        LSTMModel(args, config).model_LSTM(data)
+        LSTMModel(args, config).fit_predict(data)
     elif args.method=='SARIMAX':
-        SARIMAXModel(args, config, data).model_sarimax()                  
-    else:
-        SARIMAXModel(args, config, data).model_sarimax() 
-        LSTMModel(args, config, data)
+        SARIMAXModel(args, config, data).fit_predict()                  
+    #else:
+        #SARIMAXModel(args, config).model_sarimax() 
+        #LSTMModel(args, config).fit_predict(data)
     logging.info("Done")
 
 

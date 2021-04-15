@@ -33,7 +33,7 @@ class SARIMAXModel():
 		self.stepsOut = config['Forecasting']['stepsOut']
 		self.exploreParams = config['Forecasting']['SARIMAX']['GridSearchCV']
 		self.exportpath = os.path.join(args.exportpath, 'SARIMAX')
-		self.modelpath = os.path.join(args.modelpath, 'SARIMAX_best_params.p')
+		self.modelpath = os.path.join(args.modelpath, args.modelnamesarimax)
 		self.useoptim = args.useoptimalparams
 		if self.useoptim and 'Optimal SARIMAX Parameters' in config:
 			self.bestparams = config['Optimal SARIMAX Parameters']
@@ -238,7 +238,7 @@ class SARIMAXModel():
 		residualPlot = self.result.plot_diagnostics(figsize = (15, 10), lags=20)
 		residualPlot.savefig(os.path.join(self.exportpath, 'residualPlot.png'))
 
-	def model_sarimax(self):
+	def fit_predict(self):
 		""" Responsible for the train/inference pipeline of the model
 		Args:
 			df: the dataframe containing the time series data

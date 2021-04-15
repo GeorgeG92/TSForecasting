@@ -11,7 +11,7 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)     # run before importi
 
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import Dense, LSTM, Dropout, LeakyReLU
 from tensorflow.keras.models import load_model
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.metrics import mse
@@ -32,13 +32,11 @@ class LSTMModel():
 	"""  This class implements the code for the LSTM Neural Network
 	"""
 	def __init__(self, args, config):
-		self.train = args.train
+		self.train = (args.train == 'train')
 		self.verbose = config['Forecasting']['verbose']
-		if 'Optimal LSTM Parameters' in config:
-			self.optimExists = True
+		self.gridsearch = args.gridsearch
+		if not self.gridsearch:
 			self.bestParams = config['Optimal LSTM Parameters']
-		else:
-			self.optimExists = False
 		self.indexCol = 'request_date'
 		self.targetCol = 'requests'
 		self.exploreParams = config['Forecasting']['LSTM']['GridSearchCV']
@@ -49,21 +47,8 @@ class LSTMModel():
 		self.exportpath = os.path.join(args.exportpath, 'LSTM')
 		if not os.path.exists(self.exportpath):
 			os.mkdir(self.exportpath)
-		self.modelpath = os.path.join(args.modelpath, 'LSTM_best_params.h5')
+		self.modelpath = os.path.join(args.modelpath, args.modelnamelstm)
 		
-
-	def model_LSTM(self, df):
-		"""
-		Handles the process of training and evaluating the LSTM model
-		Args:
-			df: the pandas dataframe containing the data
-		"""
-		logger.info("LSTM Modeling")
-		self.df = df
-		self.train_X, self.train_Y, self.test_X, self.test_Y = self.preprocess_data(self.df)
-		#self.train_model()
-		self.train_model()
-		self.evaluate_plot()
 
 	def preprocess_data(self, df):
 		""" Performs all the required preprocessing (splitting, casting, scaling)
@@ -111,7 +96,8 @@ class LSTMModel():
 
 
 
-	def compile_model(self, L2, batchSize, dropout, learningRate, optimizer):
+	def compile_model(self, L2, batchSize, dropout, learningRate, optimizer,
+			init='glorot_uniform'):
 		""" Compiles the model given the input hyperparameters
 		Args:
 			L2: l2 regularization parameter
@@ -120,14 +106,15 @@ class LSTMModel():
 			learningRate: the learning rate parameter
 			optimizer: which optimizer to use for model training
 		"""
-		input_shape = self.inputshape
 		model = Sequential()                           # LSTM input layer MUST be 3D - (samples, timesteps, features)
-		model.add(LSTM(20,
-					   return_sequences=True,          # necessary for stacked LSTM layers
-					   input_shape=(input_shape[1], input_shape[2])))
-		model.add(LSTM(10))
+		model.add(LSTM(self.input_shape[1],
+					   #return_sequences=True,          # necessary for stacked LSTM layers
+					   input_shape=(self.input_shape[1], self.input_shape[2])))
 		model.add(Dropout(dropout))
-		model.add(Dense(20, kernel_regularizer=l2(L2)))
+		model.add(Dense(256, 
+			kernel_initializer = init,
+			kernel_regularizer=l2(l2_reg), 
+			activation=LeakyReLU(alpha=alpha)))
 		model.add(Dropout(dropout))
 		model.add(Dense(self.stepsOut))
 
@@ -138,21 +125,15 @@ class LSTMModel():
 	def train_optimal(self, bp):
 		""" Trains the model given a set of optimal hyperparameters
 		Args:
-			model: a keras model instance
 			bp: a dictionary containing the best hyperaparameters
-			train_X: the train data features
-			train_Y: the train data labels
 		"""
-		logger.info("\tTraining model with optimal parameters...")
-		batch_size = bp['batchSize']
-		epochs = bp['epochs']
-		history = self.model.fit(self.train_X, self.train_Y,
-								epochs=epochs, batch_size=batch_size,
+		logger.info("\tTraining model with optimal parameters...")		
+		self.history = self.model.fit(self.train_X, self.train_Y,
+								epochs=bp['epochs'], 
+								batch_size=bp['batch_size'],
 								verbose=self.verbose)
 		# enforce model to disk (.h5)
-		model.save(self.modelpath)
-		self.history = history
-		return model
+		self.save_model()
 
 	def grid_search_cv(self):
 		""" Performs grid search cross validation on the train data
@@ -177,22 +158,51 @@ class LSTMModel():
 		self.history = bestModel.history.history
 		return bestModel
 
+	def load_model(self):
+		""" Loads the model from disk
+		"""
+		logger.info("\tLoading model from disk")
+		self.model = tf.keras.models.load_model(self.modelpath,
+									custom_objects={'LeakyReLU': tf.keras.layers.LeakyReLU})
+
+	def save_model(self):
+		""" Saves the model to disk after successful training
+		"""
+		logger.info("\tSaving model to disk")
+		self.model.save(self.modelpath)
+
+
+	def fit_predict(self, df):
+		"""
+		Handles the process of training and evaluating the LSTM model
+		Args:
+			df: the pandas dataframe containing the data
+		"""
+		logger.info("LSTM Modeling")
+		self.df = df
+		self.train_X, self.train_Y, self.test_X, self.test_Y = self.preprocess_data(self.df)
+		
+		# Load/Train
+		if (not self.train):
+			self.load_model()
+		else:
+			self.train_model()
+
+		# Inference
+		self.run_inference()
+
 	def train_model(self):
 		""" Builds a new Keras model and trains it or loads existing from disk
 		"""
-		logger.info("\tBuilding model...")
-		if (not self.train) & os.path.exists(self.modelpath):
-			self.model = load_model(self.modelpath)
-			print(self.history)
+		
+		if not self.gridsearch:                                 # Train using optimal parameters
+			bp = self.bestParams
+			self.model = self.compile_model(bp['L2'], bp['batch_size'], bp['dropout'], bp['learning_rate'], bp['optimizer'])
+			self.train_optimal(bp)
+			self.plot_train_history()
 		else:
-			if self.optimExists:                                 # Train using optimal parameters
-				bp = self.bestParams
-				self.model = self.compile_model(bp['L2'], bp['batchSize'], bp['dropout'], bp['learningRate'], bp['optimizer'])
-				self.model = self.train_optimal(bp)
-				self.plot_train_history()
-			else:
-				self.model = self.grid_search_cv()
-				self.plot_train_history()
+			self.model = self.grid_search_cv()
+			self.plot_train_history()
 		
 
 	def plot_train_history(self):
@@ -213,7 +223,7 @@ class LSTMModel():
 		plt.close()
 
 
-	def evaluate_plot(self):
+	def run_inference(self):
 		""" Run Inference and persist plotted results to disk 
 		"""
 		trainPredict = self.model.predict(self.train_X)

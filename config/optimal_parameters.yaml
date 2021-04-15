@@ -1,10 +1,11 @@
 Optimal LSTM Parameters:
   L2: 0
-  batchSize: 32
+  alpha: 0.1
+  batch_size: 128
   dropout: 0.3
   epochs: 10
-  learningRate: 0.01
-  optimizer: RMSprop
+  learning_rate: 0.01
+  optimizer: adam
 Optimal SARIMAX Parameters:
   p: 3
   d: 0
