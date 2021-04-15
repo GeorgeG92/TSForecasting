@@ -19,7 +19,7 @@ def main(args, config):
     if args.method=='LSTM':
         LSTMModel(args, config).fit_predict(data)
     elif args.method=='SARIMAX':
-        SARIMAXModel(args, config, data).fit_predict()                  
+        SARIMAXModel(args, config).fit_predict(data)                  
     #else:
         #SARIMAXModel(args, config).model_sarimax() 
         #LSTMModel(args, config).fit_predict(data)

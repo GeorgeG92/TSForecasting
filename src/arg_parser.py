@@ -87,24 +87,22 @@ def arg_parser(argv):
 		#format='%(asctime)s | %(levelname)8s | %(filename)s:%(funcName)30s | %(message)s')
 	logger = logging.getLogger(__file__)
 											  # exclude filename
-	if args.train:
-		if args.method=='LSTM' and not os.path.exists(args.modelpath):
-			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.join(rgs.modelpath, 'SARIMAX_best_params.p')))
+	if args.train==False:
+		if args.method=='LSTM' and not os.path.exists(os.path.join(args.modelpath, args.modelnamelstm)):
+			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.join(args.modelpath, args.modelnamelstm)))
 			logger.warning("Setting train to True")
 			args.train=True
-		else:
-			logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.join(args.modelpath, 'SARIMAX_best_params.p')))
-			logger.warning("Setting train to True")
-			#assert os.path.exists(args.modelpath, 'SARIMAX_best_params.p'), "Train is set to False but model doesn't exist at {p}".format(p=os.path.exists(args.modelpath, 'SARIMAX_best_params.p'))
-			args.train = True
+		elif args.method=='SARIMAX' and not os.path.exists(os.path.join(args.modelpath, args.modelnamesarimax)):
+				logger.warning("Train is set to False but model doesn't exist at {p}".format(p=os.path.join(args.modelpath, args.modelnamesarimax)))
+				logger.warning("Setting train to True")
+				args.train = True
 
 	if args.explore and not args.cluster:
 		logger.error("Argument error: --explore argument requires --cluster")
 		sys.exit(1)
-	if not os.path.exists(os.path.join(args.modelpath, args.method)):
-		logger.info("Creating Model path")
-		os.makedirs(os.path.join(args.modelpath, args.method))
-	args.modelpath = os.path.join(args.modelpath, args.method)
+	if not os.path.exists(args.modelpath):
+		logger.info("Creating Models path")
+		os.makedirs(args.modelpath)
 	if not os.path.exists(args.exportpath):
 		logger.info("Creating exportpath")
 		os.makedirs(os.path.join(args.exportpath))
